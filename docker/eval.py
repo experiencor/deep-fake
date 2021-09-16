@@ -44,11 +44,11 @@ ROOT_PATH           = "."
 nvmlInit()
 h = nvmlDeviceGetHandleByIndex(0)
 info = nvmlDeviceGetMemoryInfo(h)
-multiplier = int(np.ceil((info.free/1e9) / 4.3))
+multiplier = int(np.ceil((info.free/1e9) / 5))
 logging.warning(f"multiplier: {multiplier}")
 
-CROP_NUM_WORKERS    = CROP_NUM_WORKERS * max(1, multiplier-1)
-EVAL_BATCH_SIZE     = EVAL_BATCH_SIZE  * max(1, multiplier-1)
+CROP_NUM_WORKERS    = CROP_NUM_WORKERS * max(1, multiplier)
+EVAL_BATCH_SIZE     = EVAL_BATCH_SIZE  * max(1, multiplier)
 
 
 class PackPathway(torch.nn.Module):

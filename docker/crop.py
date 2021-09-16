@@ -148,7 +148,8 @@ def main(number_of_workers, input_dir, output_dir, save_image):
     create_folder(output_dir)
 
     for f in os.listdir(input_dir):
-        queue.put(f"{input_dir}/{f}")
+        if f.endswith(".mp4"):
+            queue.put(f"{input_dir}/{f}")
 
     workers = []
     for i in range(number_of_workers):
