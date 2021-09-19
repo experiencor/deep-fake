@@ -290,7 +290,7 @@ def main(args):
     }
     wandb.init(project="deepfake", config=config)
     
-    """checkpoint_callback = ModelCheckpoint(
+    checkpoint_callback = ModelCheckpoint(
         monitor="val/auc",
         dirpath=os.path.join(f"/mnt/Storage/trained_models/best_model/{wandb.run.name}"),
         filename="model",
@@ -325,7 +325,7 @@ def main(args):
     state_dict = torch.load(best_path)["state_dict"]
     classification_module.load_state_dict(state_dict)
     set_seed(SEED)
-    trainer.test(classification_module, [data_module.test_dataloader()])"""
+    trainer.test(classification_module, [data_module.test_dataloader()])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some integers.')
