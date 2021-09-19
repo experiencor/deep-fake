@@ -312,7 +312,6 @@ def main(args):
         gpus=num_gpu,
         callbacks=[checkpoint_callback],
         accelerator="ddp", 
-        precision=16,
     )
     
     trainer.fit(classification_module, data_module)
