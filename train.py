@@ -95,8 +95,8 @@ def get_top_prob(logits):
     
 
 class CustomDataModule(pytorch_lightning.LightningDataModule):
-    def __init__(self):
-        super().__init__(self, data_version)
+    def __init__(self, data_version):
+        super().__init__()
         self.train_dataset = CustomVideoDataset(
             f"/data/projects/deepfake/data/{data_version}/train.csv",
             frame_number=FRAME_NUMBER,
