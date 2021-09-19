@@ -316,7 +316,7 @@ def main(args):
     
     trainer.fit(classification_module, data_module)
     time.sleep(10)
-    best_path = f"{ROOT_PATH}/output/{run.id}/model.ckpt")
+    best_path = f"{ROOT_PATH}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     classification_module.load_state_dict(state_dict)
     set_seed(SEED)
