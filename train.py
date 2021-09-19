@@ -101,7 +101,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             f"/data/projects/deepfake/data/{data_version}/train.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix"/faces/",
+            video_path_prefix="/faces/",
             augmentation=train_aug,
             transform=transform,
         )
