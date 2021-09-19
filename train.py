@@ -98,7 +98,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self):
         super().__init__(self, data_version)
         self.train_dataset = CustomVideoDataset(
-            f"/data/projects/deepfake/data/{data_version}/train.csv"),
+            f"/data/projects/deepfake/data/{data_version}/train.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             video_path_prefix"/faces/",
@@ -106,7 +106,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform,
         )
         self.val_dataset = CustomVideoDataset(
-            f"/data/projects/deepfake/data/{data_version}/val.csv"),
+            f"/data/projects/deepfake/data/{data_version}/val.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             video_path_prefix="/faces/",
@@ -114,7 +114,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform
         )
         self.test_dataset = CustomVideoDataset(
-            f"/data/projects/deepfake/data/{data_version}/test.csv"),
+            f"/data/projects/deepfake/data/{data_version}/test.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             video_path_prefix="/faces/",
