@@ -101,7 +101,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             f"{ROOT_PATH}/data/{data_version}/train.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix="/faces/docker/",
+            video_path_prefix="/docker/faces/",
             augmentation=train_aug,
             transform=transform,
         )
@@ -109,7 +109,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             f"{ROOT_PATH}/data/{data_version}/dev.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix="/faces/docker/",
+            video_path_prefix="/docker/faces/",
             augmentation=val_aug,
             transform=transform
         )
@@ -117,7 +117,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             f"{ROOT_PATH}/data/{data_version}/test.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix="/faces/docker/",
+            video_path_prefix="/docker/faces/",
             transform=transform
         )   
         
