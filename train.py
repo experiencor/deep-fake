@@ -283,12 +283,11 @@ def main(args):
         "image_size":       CROP_SIZE,
         "max_lr":           LEARNING_RATE
     }
-    print(config)
-    wandb.init(project="deepfake", config=config)
+    run = wandb.init(project="deepfake", config=config)
     
     checkpoint_callback = ModelCheckpoint(
         monitor="val/auc",
-        dirpath=f"{ROOT_PATH}/output/{wandb.run.name}",
+        dirpath=f"{ROOT_PATH}/output/{run.id}",
         filename="model",
         save_top_k=1,
         mode="max",
