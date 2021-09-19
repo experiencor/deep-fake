@@ -28,7 +28,7 @@ from torchvision.transforms import (
 
 LEARNING_RATE       = 1e-4
 SEED                = 100
-EPOCH               = 2
+EPOCH               = 1
 ALPHA               = 4
 FRAME_NUMBER        = 32
 OCCLUDED_PERCENT    = 0.3
@@ -316,7 +316,7 @@ def main(args):
     
     trainer.fit(classification_module, data_module)
     time.sleep(10)
-    best_path = os.path.join(ROOT_PATH, "output/best_model/model.ckpt")
+    best_path = f"{ROOT_PATH}/output/{run.id}/model.ckpt")
     state_dict = torch.load(best_path)["state_dict"]
     classification_module.load_state_dict(state_dict)
     set_seed(SEED)
