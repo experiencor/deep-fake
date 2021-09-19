@@ -73,6 +73,7 @@ def worker(i, output_dir, save_image):
         file_path = queue.get()
 
         if file_path is None:
+            queue.task_done()
             return
 
         if fail_queue.qsize() > 8:
@@ -133,8 +134,6 @@ def worker(i, output_dir, save_image):
 
                     l_idx += increment
                     r_idx  = l_idx + FRAME_NUMBER
-
-            queue.task_done()
         except Exception as e:
             queue.put(file_path)
             fail_queue.put(file_path)
@@ -142,6 +141,8 @@ def worker(i, output_dir, save_image):
             log(e)
             log(f"number of failed videos: {fail_queue.qsize()}")
             traceback.print_exc()
+
+        queue.task_done()
         
 
 def main(number_of_workers, input_dir, output_dir, save_image):    
