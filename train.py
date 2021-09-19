@@ -28,7 +28,7 @@ from torchvision.transforms import (
 
 LEARNING_RATE       = 1e-4
 SEED                = 100
-EPOCH               = 1
+EPOCH               = 32
 ALPHA               = 4
 FRAME_NUMBER        = 32
 OCCLUDED_PERCENT    = 0.3
