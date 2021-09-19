@@ -283,6 +283,7 @@ def main(args):
         "image_size":       CROP_SIZE,
         "max_lr":           LEARNING_RATE
     }
+    print(config)
     wandb.init(project="deepfake", config=config)
     
     checkpoint_callback = ModelCheckpoint(
