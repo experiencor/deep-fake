@@ -36,7 +36,7 @@ PREFETCH_FACTOR     = 2
 NUM_WORKERS         = 4
 
 # Dataset configuration
-ROOT_PATH           = "../"
+ROOT_PATH           = "/data/projects/deepfake"
 BATCH_SIZE          = 14
 FRAME_SIZE          = 224
 CROP_SIZE           = 224
@@ -98,7 +98,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self, data_version):
         super().__init__()
         self.train_dataset = CustomVideoDataset(
-            f"/data/projects/deepfake/data/{data_version}/train.csv",
+            f"{ROOT_PATH}/data/{data_version}/train.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             video_path_prefix="/faces/",
@@ -106,7 +106,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform,
         )
         self.val_dataset = CustomVideoDataset(
-            f"/data/projects/deepfake/data/{data_version}/dev.csv",
+            f"{ROOT_PATH}/data/{data_version}/dev.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             video_path_prefix="/faces/",
@@ -114,7 +114,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform
         )
         self.test_dataset = CustomVideoDataset(
-            f"/data/projects/deepfake/data/{data_version}/test.csv",
+            f"{ROOT_PATH}/data/{data_version}/test.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             video_path_prefix="/faces/",
@@ -288,7 +288,7 @@ def main(args):
     
     checkpoint_callback = ModelCheckpoint(
         monitor="val/auc",
-        dirpath=os.path.join(f"/mnt/Storage/trained_models/best_model/{wandb.run.name}"),
+        dirpath=f"{ROOT_PATH}/output/{wandb.run.name}",
         filename="model",
         save_top_k=1,
         mode="max",
@@ -299,7 +299,7 @@ def main(args):
     classification_module = CustomClassificationLightningModule(
         total_steps=total_steps
     )
-    pretrain = torch.load(f"/data/projects/deepfake/pretrain/{args.pret_version}/model.ckpt")
+    pretrain = torch.load(f"{ROOT_PATH}/pretrain/{args.pret_version}/model.ckpt")
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
     missing_keys, unexpected_keys = classification_module.load_state_dict(pretrain)
