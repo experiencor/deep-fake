@@ -106,7 +106,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform,
         )
         self.val_dataset = CustomVideoDataset(
-            f"/data/projects/deepfake/data/{data_version}/val.csv",
+            f"/data/projects/deepfake/data/{data_version}/dev.csv",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             video_path_prefix="/faces/",
