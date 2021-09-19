@@ -96,33 +96,28 @@ def get_top_prob(logits):
 
 class CustomDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self):
-        super().__init__()
+        super().__init__(self, data_version)
         self.train_dataset = CustomVideoDataset(
-            os.path.join(ROOT_PATH, "data/train.csv"),
+            f"/data/projects/deepfake/data/{data_version}/train.csv"),
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            occluded_percent=OCCLUDED_PERCENT,
-            video_path_prefix=os.path.join(ROOT_PATH, "data"),
-            inflation=1,
+            video_path_prefix"/faces/",
             augmentation=train_aug,
             transform=transform,
         )
         self.val_dataset = CustomVideoDataset(
-            os.path.join(ROOT_PATH, "data/val.csv"),
+            f"/data/projects/deepfake/data/{data_version}/val.csv"),
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            occluded_percent=OCCLUDED_PERCENT,
-            video_path_prefix=os.path.join(ROOT_PATH, "data"),
-            inflation=1,
+            video_path_prefix="/faces/",
             augmentation=val_aug,
             transform=transform
         )
         self.test_dataset = CustomVideoDataset(
-            os.path.join(ROOT_PATH, "data/test.csv"),
+            f"/data/projects/deepfake/data/{data_version}/test.csv"),
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix=os.path.join(ROOT_PATH, "data"),
-            inflation=1,
+            video_path_prefix="/faces/",
             transform=transform
         )   
         
