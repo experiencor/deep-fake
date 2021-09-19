@@ -37,7 +37,7 @@ NUM_WORKERS         = 4
 
 # Dataset configuration
 ROOT_PATH           = "/data/projects/deepfake"
-BATCH_SIZE          = 14
+BATCH_SIZE          = 8
 FRAME_SIZE          = 224
 CROP_SIZE           = 224
     
