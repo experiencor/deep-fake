@@ -298,7 +298,7 @@ def main(args):
     classification_module = CustomClassificationLightningModule(
         total_steps=total_steps
     )
-    pretrain = torch.load(f"/data/projects/deepfake/pretrain/{args.pretrain}/model.ckpt")
+    pretrain = torch.load(f"/data/projects/deepfake/pretrain/{args.pret_version}/model.ckpt")
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
     missing_keys, unexpected_keys = classification_module.load_state_dict(pretrain)
