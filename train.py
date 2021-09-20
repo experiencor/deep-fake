@@ -104,7 +104,7 @@ def calc_prob(logits):
 class CustomDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self, data_version):
         super().__init__()
-        video_path = f"/data/projects/deepfake/data/{data_version}"
+        video_path = f"{ROOT_PATH}/data/{data_version}"
 
         splits = pd.read_csv("splits.csv")
         all_files = set(os.listdir(f"{video_path}/0"))
@@ -137,7 +137,8 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform
         )
 
-    def train_dataloader(self):        
+    def train_dataloader(self):
+        log("0" * 50) 
         return torch.utils.data.DataLoader(
                 self.train_dataset,
                 batch_size=BATCH_SIZE,
