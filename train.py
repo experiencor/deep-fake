@@ -104,7 +104,7 @@ def calc_prob(logits):
 class CustomDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self, data_version):
         super().__init__()
-        video_path = f"{ROOT_PATH}/data/{data_version}"
+        self.video_path = f"{ROOT_PATH}/data/{data_version}"
 
         splits = pd.read_csv("splits.csv")
         all_files = set(os.listdir(f"{video_path}/0"))
@@ -115,14 +115,14 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         
         self.val_dataset = CustomVideoDataset(
             data_frame=dev_data,
-            video_path_prefix=f"{video_path}/0",
+            video_path_prefix=f"{self.video_path}/0",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             transform=transform
         )
         self.test_dataset = CustomVideoDataset(
             data_frame=test_data,
-            video_path_prefix=f"{video_path}/0",
+            video_path_prefix=f"{self.video_path}/0",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             transform=transform
@@ -137,7 +137,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         log(set_idx)
         self.train_dataset = CustomVideoDataset(
             data_frame=self.train_data,
-            video_path_prefix=f"{video_path}/{set_idx}",
+            video_path_prefix=f"{self.video_path}/{set_idx}",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             transform=transform,
