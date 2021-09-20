@@ -116,7 +116,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
 
         self.train_dataset = CustomVideoDataset(
             data_frame=train_data,
-            video_path_prefix=video_path,
+            video_path_prefix=f"{video_path}/0",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             transform=transform,
@@ -124,18 +124,18 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         )
         self.val_dataset = CustomVideoDataset(
             data_frame=dev_data,
-            video_path_prefix=video_path,
+            video_path_prefix=f"{video_path}/0",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             transform=transform
         )
         self.test_dataset = CustomVideoDataset(
             data_frame=test_data,
-            video_path_prefix=video_path,
+            video_path_prefix=f"{video_path}/0",
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             transform=transform
-        )   
+        )
         
     def train_dataloader(self):
         return torch.utils.data.DataLoader(
