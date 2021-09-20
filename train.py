@@ -110,8 +110,9 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         all_files = set(os.listdir(f"{self.video_path}/0"))
         splits = splits[splits.filename.isin(all_files)].copy()
 
-        dev_data = splits[splits.split == "dev"]
-        test_data = splits[splits.split == "test"]
+        self.train_data = splits[splits.split == "train"].copy()
+        dev_data = splits[splits.split == "dev"].copy()
+        test_data = splits[splits.split == "test"].copy()
         
         self.val_dataset = CustomVideoDataset(
             data_frame=dev_data,
@@ -130,7 +131,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
 
         self.num_sets = len(os.listdir(self.video_path))
         self.epoch = 0
-        self.train_data = splits[splits.split == "train"]
+        
 
     def train_dataloader(self):
         set_idx = self.epoch % self.num_sets
@@ -298,19 +299,20 @@ def main(args):
     }
     run = wandb.init(project="deepfake", config=config)
     
+    # set up the data and trainer modules
     checkpoint_callback = ModelCheckpoint(
         monitor="val/auc",
         dirpath=f"{ROOT_PATH}/output/{run.id}",
         filename="model",
         save_top_k=1,
         mode="max",
-    )
-    
+    )    
     data_module = CustomDataModule(args.data_version)
-    total_steps = EPOCH * int(np.ceil(data_module.get_trainset_size() / (BATCH_SIZE)))
+    total_steps = EPOCH * int(np.ceil(data_module.get_trainset_size() / BATCH_SIZE))
     classification_module = CustomClassificationLightningModule(
         total_steps=total_steps
     )
+
     pretrain = torch.load(f"{ROOT_PATH}/pretrain/{args.pret_version}/model.ckpt")
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
@@ -328,13 +330,15 @@ def main(args):
         precision=32 if DEVICE == "cpu" else 16,
     )
     
+    # start training and validating
     trainer.fit(classification_module, data_module)
     time.sleep(10)
+
+    # perform evaluation on the test set
+    set_seed(SEED)
     best_path = f"{ROOT_PATH}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     classification_module.load_state_dict(state_dict)
-
-    set_seed(SEED)
     trainer.test(classification_module, [data_module.test_dataloader()])
 
 if __name__ == "__main__":
