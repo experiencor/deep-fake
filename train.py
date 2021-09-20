@@ -136,6 +136,8 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             frame_size=FRAME_SIZE,
             transform=transform
         )
+
+        #log("sadfasdfasdfsadfsdfasdfasdfasdfsdfasdf")
         
     def train_dataloader(self):
         return torch.utils.data.DataLoader(
