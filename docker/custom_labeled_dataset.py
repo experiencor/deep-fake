@@ -27,7 +27,7 @@ class CustomVideoDataset(torch.utils.data.Dataset):
         frame_size: int = 224,
         augmentation = None,
     ) -> None:
-        self._access_count = 0
+        self._epoch = 0
         self._data_frame = data_frame
         self._transform = transform
         self._frame_number = frame_number
@@ -40,7 +40,8 @@ class CustomVideoDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, video_index):
         if video_index == len(self._data_frame) - 1:
-            log("=" * 25)
+            log("=" * 25, self._epoch)
+            self._epoch += 1
 
         data_row = self._data_frame.iloc[video_index]
         filename = data_row["filename"] 
