@@ -115,7 +115,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         test_data = splits[splits == "test"]
 
         self.train_dataset = CustomVideoDataset(
-            data=train_data,
+            data_frame=train_data,
             video_path_prefix=video_path,
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
@@ -123,14 +123,14 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             augmentation=train_aug,
         )
         self.val_dataset = CustomVideoDataset(
-            data=dev_data,
+            data_frame=dev_data,
             video_path_prefix=video_path,
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
             transform=transform
         )
         self.test_dataset = CustomVideoDataset(
-            data=test_data,
+            data_frame=test_data,
             video_path_prefix=video_path,
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
