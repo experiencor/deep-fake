@@ -135,7 +135,6 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
 
     def train_dataloader(self):
         set_idx = self.epoch % self.num_sets
-        log(set_idx)
         self.train_dataset = CustomVideoDataset(
             data_frame=self.train_data,
             video_path_prefix=f"{self.video_path}/{set_idx}",
