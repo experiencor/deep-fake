@@ -323,9 +323,9 @@ def main(args):
         num_sanity_val_steps=0,
         max_epochs=EPOCH,
         gpus=num_gpu,
+        log_every_n_steps=0,
         callbacks=[checkpoint_callback],
         reload_dataloaders_every_n_epochs=1,
-        accelerator="ddp", 
         precision=32 if DEVICE == "cpu" else 16,
     )
     
