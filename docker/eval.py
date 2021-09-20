@@ -1,11 +1,13 @@
 import os
 import pytorch_lightning
+import torch.nn as nn
 import pytorchvideo.data
 import torch.utils.data
 import pytorchvideo.models.resnet
 import torch
 import time
 import random
+from utils import log
 import pandas as pd
 import logging
 import torch.nn.functional as F
@@ -23,7 +25,8 @@ from torchvision.transforms import (
     Lambda,
 )
 
-NUM_ITERATIONS      = 5
+DEVICE              = "cpu"
+NUM_ITERATIONS      = 1
 
 EVAL_BATCH_SIZE     = 1
 EVAL_NUM_WORKERS    = 1
@@ -51,22 +54,6 @@ CROP_NUM_WORKERS    = CROP_NUM_WORKERS * max(1, multiplier)
 EVAL_BATCH_SIZE     = EVAL_BATCH_SIZE  * max(1, multiplier)
 
 
-class PackPathway(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, frames: torch.Tensor):
-        fast_pathway = frames
-        slow_pathway = torch.index_select(
-            frames,
-            1,
-            torch.linspace(
-                0, frames.shape[1] - 1, frames.shape[1] // ALPHA
-            ).long()
-        )
-        frame_list = [slow_pathway, fast_pathway]
-        return frame_list
-
 transform = Compose(
     [
     ApplyTransformToKey(
@@ -75,7 +62,6 @@ transform = Compose(
             [
             Lambda(lambda x: x / 255.0),
             Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
-            PackPathway()
             ]
         ),
         ),
@@ -100,8 +86,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             os.path.join(ROOT_PATH, "test.csv"),
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix=input_dir,
-            inflation=1,
+            video_path_prefix="faces/0/",
             transform=transform
         )
     
@@ -119,8 +104,12 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
 class CustomClassificationLightningModule(LightningModule):
     def __init__(self):
         super().__init__()
-        self.model = pytorchvideo.models.slowfast.create_slowfast(
-            model_num_class=2,
+        self.model = pytorchvideo.models.resnet.create_resnet(
+            input_channel=3, # RGB input from Kinetics
+            model_depth=50, # For the tutorial let's just use a 50 layer network
+            model_num_class=2, # Kinetics has 400 classes so we need out final head to align
+            norm=nn.BatchNorm3d,
+            activation=nn.ReLU,
         )
 
     def forward(self, x):
@@ -135,7 +124,7 @@ def main(input_dir, output_file):
         os.mkdir("/data/face")
         
     set_seed(SEED)
-    num_gpu = torch.cuda.device_count()
+    num_gpu = 0#torch.cuda.device_count()
 
     # read the video files and make the test file
     logging.warning("cropping videos")
@@ -148,13 +137,13 @@ def main(input_dir, output_file):
                 test_videos += [video]
                 
     # crop the faces from the videos    
-    os.system(f"python crop.py -workers {CROP_NUM_WORKERS} -input {input_dir} -output .")
+    os.system(f"python crop.py --workers {CROP_NUM_WORKERS} --input {input_dir} --output faces")
     avg_crop_time = (time.time() - tik) / len(test_videos)
     logging.warning(f'Face cropping completed! Average crop time: {avg_crop_time} for {len(test_videos)} videos.')
     time.sleep(15)
 
     face_count = 0
-    for face in os.listdir("/data/face/"):
+    for face in os.listdir("faces/0/"):
         if ".npy" in face:
             face_count += 1
     if face_count != len(test_videos):
@@ -171,8 +160,8 @@ def main(input_dir, output_file):
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
     missing_keys, unexpected_keys = classification_module.load_state_dict(pretrain)
-    logging.warning("missing_keys   :\t", missing_keys)
-    logging.warning("unexpected_keys:\t", unexpected_keys)
+    log("missing_keys   :\t", missing_keys)
+    log("unexpected_keys:\t", unexpected_keys)
     
     trainer = pytorch_lightning.Trainer(
         num_sanity_val_steps=0,

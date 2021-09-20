@@ -10,11 +10,13 @@ import traceback
 import numpy as np
 from argparse import ArgumentParser
 from utils import log, create_folder
-from eval import FRAME_NUMBER, FRAME_SIZE, NUM_ITERATIONS, CROP_BATCH_SIZE, CROP_THRESHOLD
+import hashlib
+from eval import FRAME_NUMBER, FRAME_SIZE, CROP_BATCH_SIZE, CROP_THRESHOLD, DEVICE
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
 fail_queue = JoinableQueue()
+
 
 def apply_crop(frame, boxes, probs, margin=0.5):
     if boxes is None:
@@ -41,6 +43,7 @@ def apply_crop(frame, boxes, probs, margin=0.5):
     z = center_x + size
     return frame[y:t, x:z, :], probs[face_idx]
 
+
 def crop_faces(mtcnn, frames):
     all_boxes, all_probs = [], []
 
@@ -58,20 +61,19 @@ def crop_faces(mtcnn, frames):
         return_probs += [prob]
     
     return return_faces, return_probs
+    
 
-def worker(i, output_dir, save_image):
-    np.random.seed(i)
-
+def worker(output_dir, num_iters, save_image, no_cache):
     mtcnn = MTCNN(
         margin = 14,
         factor = 0.6,
         keep_all = True,
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = DEVICE if torch.cuda.is_available() else "cpu"
     )
     
     while True:
         file_path = queue.get()
-
+        
         if file_path is None:
             queue.task_done()
             return
@@ -80,14 +82,17 @@ def worker(i, output_dir, save_image):
             queue.task_done()
             continue
 
-        try:
-            file_name = file_path.split("/")[-1]
+        file_name = file_path.split("/")[-1]
+        seed = hashlib.sha224(file_name.encode('utf-8')).hexdigest()
+        seed = int(seed[16:20], 16)
+        np.random.seed(seed)        
 
-            if not os.path.exists(f"{output_dir}/{file_name}.npy"):
+        try:
+            if not os.path.exists(f"{output_dir}/0/{file_name}.npy") or no_cache:
                 video = cv2.VideoCapture(file_path)
                 
                 frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-                total_count = NUM_ITERATIONS * FRAME_NUMBER
+                total_count = num_iters * FRAME_NUMBER
                 if total_count <= frame_count:
                     chosen_indices = np.random.choice(range(frame_count), total_count, replace=False)
                 else:
@@ -105,17 +110,13 @@ def worker(i, output_dir, save_image):
                     i += 1
 
                 faces, probs = crop_faces(mtcnn, frames)
-                # if len(faces) < total_count:
-                #     log(f"{file_name} {str(len(faces))}")
-                #     log(chosen_indices)
-                #     log(frame_count, total_count)
 
-                iter_face_count = len(faces) // NUM_ITERATIONS
+                iter_face_count = len(faces) // num_iters
                 random_indices  = np.arange(len(faces))
                 l_idx, r_idx    = 0, FRAME_NUMBER
-                increment       = (len(faces) + 1 - FRAME_NUMBER) // NUM_ITERATIONS
+                increment       = (len(faces) + 1 - FRAME_NUMBER) // num_iters
                 np.random.shuffle(random_indices)
-                for iteration in range(NUM_ITERATIONS):
+                for iteration in range(num_iters):
                     iter_path = f"{output_dir}/{iteration}"
                     create_folder(iter_path)
                     
@@ -142,40 +143,39 @@ def worker(i, output_dir, save_image):
             log(f"number of failed videos: {fail_queue.qsize()}")
             traceback.print_exc()
 
+        np.random.seed()
         queue.task_done()
         
 
-def main(number_of_workers, input_dir, output_dir, save_image):    
-    create_folder(output_dir)
+def main(args):    
+    create_folder(args.output)
 
-    for f in os.listdir(input_dir):
+    for f in os.listdir(args.input):
         if f.endswith(".mp4"):
-            queue.put(f"{input_dir}/{f}")
+            queue.put(f"{args.input}/{f}")
 
     workers = []
-    for i in range(number_of_workers):
-        process = Process(target=worker, args=(i, output_dir, save_image))
+    for i in range(args.workers):
+        process = Process(target=worker, args=(args.output, args.num_iters, args.image, args.no_cache))
         process.start()
         workers.append(process)
     queue.join()
 
-    for i in range(number_of_workers):
+    for i in range(args.workers):
         queue.put(None)
 
     for w in workers:
         w.join()
+        
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--workers", type=int,  required=True, help="Number of workers")
-    parser.add_argument("--input",   type=str,  required=True, help="Input directory of raw videos")
-    parser.add_argument("--output",  type=str,  required=True, help="Output directory of faces")
-    parser.add_argument("--image",   action='store_true')
-    args = parser.parse_args()
+    parser.add_argument("--workers",    type=int,  required=True, help="Number of workers")
+    parser.add_argument("--num-iters",  type=int,  required=True, help="Number of iterations")
+    parser.add_argument("--input",      type=str,  required=True, help="Input directory of raw videos")
+    parser.add_argument("--output",     type=str,  required=True, help="Output directory of faces")
+    parser.add_argument("--image",      action='store_true')
+    parser.add_argument("--no-cache",   action='store_true')
 
-    main(
-        number_of_workers=args.workers, 
-        input_dir=args.input, 
-        output_dir=args.output, 
-        save_image=args.image
-    )
+    args = parser.parse_args()
+    main(args)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import Any, Callable, Optional
 import cv2
@@ -22,29 +24,23 @@ class CustomVideoDataset(torch.utils.data.Dataset):
         transform: Optional[Callable[[dict], Any]] = None,
         frame_number: int = 32,
         frame_size: int = 224,
-        occluded_percent: float = 0.0,
-        inflation = 1,
         augmentation = None,
     ) -> None:
         self._transform = transform
         self._frame_number = frame_number
         self._frame_size = frame_size
-        self._occluded_percent = occluded_percent
         self._labeled_videos = LabeledVideoPaths.from_path(data_path)
         self._labeled_videos.path_prefix = video_path_prefix
-        self._inflation = inflation
         self._augmentation = augmentation
         
     def __len__(self):
-        return len(self._labeled_videos) * self._inflation
+        return len(self._labeled_videos)
     
     def __getitem__(self, video_index):
         video_index = video_index % len(self._labeled_videos)
         video_path, info_dict = self._labeled_videos[video_index]
 
-        file_name = video_path.split("/")[-1]
-        frames = np.load(f"/data/face/{file_name}.npy")
-                
+        frames = np.load(f"{video_path}.npy")
         missing_frames = self._frame_number - len(frames)
         frames = torch.tensor(np.stack(frames))
         frames = torch.nn.functional.pad(
