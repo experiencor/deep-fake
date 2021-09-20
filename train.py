@@ -19,7 +19,7 @@ from docker.eval import DEVICE
 from pytorch_lightning.core.lightning import LightningModule
 import numpy as np
 import wandb
-from custom_labeled_dataset import CustomVideoDataset
+from docker.custom_labeled_dataset import CustomVideoDataset
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
     Normalize,
