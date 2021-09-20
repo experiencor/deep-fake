@@ -316,6 +316,7 @@ def main(args):
         max_epochs=EPOCH,
         gpus=num_gpu,
         callbacks=[checkpoint_callback],
+        reload_dataloaders_every_n_epochs=1,
         accelerator="ddp", 
         precision=32 if DEVICE == "cpu" else 16,
     )
@@ -325,6 +326,7 @@ def main(args):
     best_path = f"{ROOT_PATH}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     classification_module.load_state_dict(state_dict)
+
     set_seed(SEED)
     trainer.test(classification_module, [data_module.test_dataloader()])
 
