@@ -5,6 +5,7 @@ import torch.utils.data
 import pytorchvideo.models.resnet
 import torch
 import random
+import pandas as pd
 import time
 import torch.nn as nn
 from pytorch_lightning.callbacks import ModelCheckpoint
