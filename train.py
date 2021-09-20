@@ -110,9 +110,9 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         all_files = set(os.listdir(f"{video_path}/0"))
         splits = splits[splits.filename.isin(all_files)].copy()
 
-        train_data = splits[splits == "train"]
-        dev_data = splits[splits == "dev"]
-        test_data = splits[splits == "test"]
+        train_data = splits[splits.split == "train"]
+        dev_data = splits[splits.split == "dev"]
+        test_data = splits[splits.split == "test"]
 
         self.train_dataset = CustomVideoDataset(
             data_frame=train_data,
