@@ -19,28 +19,29 @@ logger = logging.getLogger(__name__)
 class CustomVideoDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        data_path: str,
+        data_frame,
         video_path_prefix: str = "",
         transform: Optional[Callable[[dict], Any]] = None,
         frame_number: int = 32,
         frame_size: int = 224,
         augmentation = None,
     ) -> None:
+        self._data_frame = data_frame
         self._transform = transform
         self._frame_number = frame_number
         self._frame_size = frame_size
-        self._labeled_videos = LabeledVideoPaths.from_path(data_path)
-        self._labeled_videos.path_prefix = video_path_prefix
+        self._video_path_prefix = video_path_prefix
         self._augmentation = augmentation
         
     def __len__(self):
         return len(self._labeled_videos)
     
     def __getitem__(self, video_index):
-        video_index = video_index % len(self._labeled_videos)
-        video_path, info_dict = self._labeled_videos[video_index]
+        data_row = self._data_frame.iloc[video_index]
+        filename = data_row["filename"] 
+        label = int(data_row["label"])
 
-        frames = np.load(f"{video_path}.npy")
+        frames = np.load(f"{self._video_path_prefix}/{filename}.npy")
         missing_frames = self._frame_number - len(frames)
         frames = torch.tensor(np.stack(frames))
         frames = torch.nn.functional.pad(
@@ -50,9 +51,9 @@ class CustomVideoDataset(torch.utils.data.Dataset):
         frames = frames.permute(3, 0, 1, 2)
 
         sample_dict = {
-            "video":        frames,
-            "video_index":  video_index,
-            **info_dict,
+            "video": frames,
+            "label": label,
+            "video_index": video_index
         }
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)

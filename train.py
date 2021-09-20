@@ -13,6 +13,8 @@ import argparse
 import cv2
 import albumentations as A
 import torch.nn.functional as F
+from docker.utils import log
+from docker.eval import DEVICE
 from pytorch_lightning.core.lightning import LightningModule
 import numpy as np
 import wandb
@@ -26,22 +28,24 @@ from torchvision.transforms import (
     Lambda,
 )
 
+
+# training configuration
 LEARNING_RATE       = 1e-4
 SEED                = 100
-EPOCH               = 32
-ALPHA               = 4
+EPOCH               = 2
 FRAME_NUMBER        = 32
-OCCLUDED_PERCENT    = 0.3
 PREFETCH_FACTOR     = 2
 NUM_WORKERS         = 4
 
-# Dataset configuration
+
+# dataset configuration
 ROOT_PATH           = "/data/projects/deepfake"
-BATCH_SIZE          = 10
+BATCH_SIZE          = 4
 FRAME_SIZE          = 224
 CROP_SIZE           = 224
     
     
+# training augmentation
 train_aug = A.Compose([
     A.ImageCompression(quality_lower=60, quality_upper=100, p=0.5),
     A.GaussNoise(p=0.1),
@@ -63,10 +67,9 @@ train_aug = A.Compose([
         p=0.5
     )
 ])
-val_aug = A.Compose([
-    A.HorizontalFlip(),
-])
 
+
+# input transformation
 transform = Compose(
     [
     ApplyTransformToKey(
@@ -84,74 +87,83 @@ transform = Compose(
 train_auc   = torchmetrics.AUROC(pos_label=1)
 val_auc     = torchmetrics.AUROC(pos_label=1)
 test_auc    = torchmetrics.AUROC(pos_label=1)
-def seed_worker(seed: int):
+
+
+def set_seed(seed: int):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
 
-def get_top_prob(logits):
+def calc_prob(logits):
     return F.softmax(logits, dim=1)[:,1]
     
 
 class CustomDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self, data_version):
         super().__init__()
+        video_path = f"/data/projects/deepfake/data/{self.data_version}/"
+
+        splits = pd.read_csv("splits.csv")
+        all_files = set(os.listdir(video_path))
+        splits = splits[splits.filename.isin(all_files)].copy()
+
+        train_data = splits[splits == "train"]
+        dev_data = splits[splits == "dev"]
+        test_data = splits[splits == "test"]
+
         self.train_dataset = CustomVideoDataset(
-            f"{ROOT_PATH}/data/{data_version}/train.csv",
+            data=train_data,
+            video_path_prefix=video_path,
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix="docker/faces/0/",
-            augmentation=train_aug,
             transform=transform,
+            augmentation=train_aug,
         )
         self.val_dataset = CustomVideoDataset(
-            f"{ROOT_PATH}/data/{data_version}/dev.csv",
+            data=dev_data,
+            video_path_prefix=video_path,
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix="docker/faces/0/",
-            augmentation=val_aug,
             transform=transform
         )
         self.test_dataset = CustomVideoDataset(
-            f"{ROOT_PATH}/data/{data_version}/test.csv",
+            data=test_data,
+            video_path_prefix=video_path,
             frame_number=FRAME_NUMBER,
             frame_size=FRAME_SIZE,
-            video_path_prefix="docker/faces/0/",
             transform=transform
         )   
         
     def train_dataloader(self):
         return torch.utils.data.DataLoader(
                 self.train_dataset,
-                timeout=1000000,
                 batch_size=BATCH_SIZE,
                 sampler=torch.utils.data.RandomSampler(self.train_dataset),
                 num_workers=NUM_WORKERS,
                 prefetch_factor=PREFETCH_FACTOR,
-                worker_init_fn=seed_worker
+                worker_init_fn=set_seed
         )
 
     def val_dataloader(self):
         return torch.utils.data.DataLoader(
                 self.val_dataset,
-                timeout=1000000,
                 batch_size=BATCH_SIZE,
                 sampler=torch.utils.data.SequentialSampler(self.val_dataset),
                 num_workers=NUM_WORKERS,
                 prefetch_factor=PREFETCH_FACTOR,
-                worker_init_fn=seed_worker
+                worker_init_fn=set_seed
         )
     
     def test_dataloader(self):
         return torch.utils.data.DataLoader(
                 self.test_dataset,
-                timeout=1000000,
                 batch_size=BATCH_SIZE,
                 sampler=torch.utils.data.SequentialSampler(self.test_dataset),
                 num_workers=NUM_WORKERS,
                 prefetch_factor=PREFETCH_FACTOR,
-                worker_init_fn=seed_worker
+                worker_init_fn=set_seed
         )
 
     def get_trainset_size(self):
@@ -186,7 +198,7 @@ class CustomClassificationLightningModule(LightningModule):
         logits = self.model(batch["video"])
         loss = F.cross_entropy(logits, batch["label"])
         mean_loss = torch.mean(self.all_gather(loss))
-        train_auc.update(get_top_prob(logits), batch["label"])
+        train_auc.update(calc_prob(logits), batch["label"])
 
         self.manual_backward(loss)
         opt.step()
@@ -210,7 +222,7 @@ class CustomClassificationLightningModule(LightningModule):
         logits = self.model(batch["video"])
         loss = F.cross_entropy(logits, batch["label"])
         mean_loss = torch.mean(self.all_gather(loss))
-        val_auc.update(get_top_prob(logits), batch["label"])
+        val_auc.update(calc_prob(logits), batch["label"])
         
         if self.global_rank == 0:
             self.log_all({
@@ -235,7 +247,7 @@ class CustomClassificationLightningModule(LightningModule):
     
     def test_step(self, batch, batch_idx):            
         logits = self.model(batch["video"])
-        test_auc.update(get_top_prob(logits), batch["label"])
+        test_auc.update(calc_prob(logits), batch["label"])
     
     def test_epoch_end(self, outs):
         auc = test_auc.compute()
@@ -263,16 +275,9 @@ class CustomClassificationLightningModule(LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": "val/auc"}
     
 
-def set_seed(seed: int):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-
 def main(args):
     set_seed(SEED)
-    num_gpu = torch.cuda.device_count()
+    num_gpu = 0 if DEVICE == "cpu" else torch.cuda.device_count()
     
     config = {
         "data_version":     args.data_version,
@@ -302,8 +307,8 @@ def main(args):
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
     missing_keys, unexpected_keys = classification_module.load_state_dict(pretrain)
-    print("missing_keys   :\t", missing_keys)
-    print("unexpected_keys:\t", unexpected_keys)
+    log("missing_keys   :\t", missing_keys)
+    log("unexpected_keys:\t", unexpected_keys)
     
     trainer = pytorch_lightning.Trainer(
         num_sanity_val_steps=0,
