@@ -34,6 +34,8 @@ class CustomVideoDataset(torch.utils.data.Dataset):
         self._frame_size = frame_size
         self._video_path_prefix = video_path_prefix
         self._augmentation = augmentation
+
+        log(">" * 25)
         
     def __len__(self):
         return len(self._data_frame)

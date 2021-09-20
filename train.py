@@ -137,9 +137,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform
         )
 
-    def train_dataloader(self):
-        log(">" * 25)
-
+    def train_dataloader(self):        
         return torch.utils.data.DataLoader(
                 self.train_dataset,
                 batch_size=BATCH_SIZE,
