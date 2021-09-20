@@ -128,7 +128,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform
         )
 
-        self.num_sets = len(os.listdir(video_path))
+        self.num_sets = len(os.listdir(self.video_path))
         self.epoch = 0
         self.train_data = splits[splits.split == "train"]
 
