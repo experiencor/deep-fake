@@ -110,18 +110,9 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         all_files = set(os.listdir(f"{video_path}/0"))
         splits = splits[splits.filename.isin(all_files)].copy()
 
-        train_data = splits[splits.split == "train"]
         dev_data = splits[splits.split == "dev"]
         test_data = splits[splits.split == "test"]
-
-        self.train_dataset = CustomVideoDataset(
-            data_frame=train_data,
-            video_path_prefix=f"{video_path}/0",
-            frame_number=FRAME_NUMBER,
-            frame_size=FRAME_SIZE,
-            transform=transform,
-            augmentation=train_aug,
-        )
+        
         self.val_dataset = CustomVideoDataset(
             data_frame=dev_data,
             video_path_prefix=f"{video_path}/0",
@@ -137,8 +128,23 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform
         )
 
+        self.num_sets = len(os.listdir(video_path))
+        self.epoch = 0
+        self.train_data = splits[splits.split == "train"]
+
     def train_dataloader(self):
-        log("0" * 50) 
+        set_idx = self.epoch % self.num_sets
+        log(set_idx)
+        self.train_dataset = CustomVideoDataset(
+            data_frame=self.train_data,
+            video_path_prefix=f"{video_path}/{set_idx}",
+            frame_number=FRAME_NUMBER,
+            frame_size=FRAME_SIZE,
+            transform=transform,
+            augmentation=train_aug,
+        )
+        self.epoch += 1
+        
         return torch.utils.data.DataLoader(
                 self.train_dataset,
                 batch_size=BATCH_SIZE,
