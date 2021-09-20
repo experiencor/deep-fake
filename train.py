@@ -300,7 +300,7 @@ def main(args):
     )
     
     data_module = CustomDataModule(args.data_version)
-    total_steps = EPOCH * int(np.ceil(data_module.get_trainset_size() / (num_gpu * BATCH_SIZE)))
+    total_steps = EPOCH * int(np.ceil(data_module.get_trainset_size() / (BATCH_SIZE)))
     classification_module = CustomClassificationLightningModule(
         total_steps=total_steps
     )

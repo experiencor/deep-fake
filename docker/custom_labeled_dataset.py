@@ -34,7 +34,7 @@ class CustomVideoDataset(torch.utils.data.Dataset):
         self._augmentation = augmentation
         
     def __len__(self):
-        return len(self._labeled_videos)
+        return len(self._data_frame)
     
     def __getitem__(self, video_index):
         data_row = self._data_frame.iloc[video_index]
