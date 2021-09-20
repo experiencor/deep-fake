@@ -175,7 +175,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         )
 
     def get_trainset_size(self):
-        return len(self.train_dataset)
+        return len(self.train_data)
 
 
 class CustomClassificationLightningModule(LightningModule):
