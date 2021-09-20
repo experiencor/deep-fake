@@ -104,10 +104,10 @@ def calc_prob(logits):
 class CustomDataModule(pytorch_lightning.LightningDataModule):
     def __init__(self, data_version):
         super().__init__()
-        video_path = f"/data/projects/deepfake/data/{data_version}/"
+        video_path = f"/data/projects/deepfake/data/{data_version}"
 
         splits = pd.read_csv("splits.csv")
-        all_files = set(os.listdir(video_path))
+        all_files = set(os.listdir(f"{video_path}/0"))
         log(all_files)
         splits = splits[splits.filename.isin(all_files)].copy()
 
