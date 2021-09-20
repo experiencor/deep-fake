@@ -39,7 +39,7 @@ class CustomVideoDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, video_index):
         data_row = self._data_frame.iloc[video_index]
-        log(data_row)
+        print(self._data_frame)
         filename = data_row["filename"] 
         label = int(data_row["label"])
 
