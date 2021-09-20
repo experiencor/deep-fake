@@ -7,7 +7,7 @@ import pytorchvideo.models.resnet
 import torch
 import time
 import random
-from utils import log
+from .utils import log
 import pandas as pd
 import logging
 import torch.nn.functional as F
