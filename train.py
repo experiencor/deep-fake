@@ -108,6 +108,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
 
         splits = pd.read_csv("splits.csv")
         all_files = set(os.listdir(video_path))
+        log(all_files)
         splits = splits[splits.filename.isin(all_files)].copy()
 
         train_data = splits[splits == "train"]
