@@ -33,7 +33,7 @@ from torchvision.transforms import (
 # training configuration
 LEARNING_RATE       = 1e-4
 SEED                = 100
-EPOCH               = 2
+EPOCH               = 8
 FRAME_NUMBER        = 32
 PREFETCH_FACTOR     = 2
 NUM_WORKERS         = 2
