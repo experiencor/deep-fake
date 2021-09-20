@@ -40,7 +40,7 @@ class CustomVideoDataset(torch.utils.data.Dataset):
         return len(self._data_frame)
     
     def __getitem__(self, video_index):
-        log(len(self._data_frame))
+        log(len(self._data_frame, video_index))
         data_row = self._data_frame.iloc[video_index]
         filename = data_row["filename"] 
         label = int(data_row["label"])
