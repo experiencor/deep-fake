@@ -137,7 +137,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
             transform=transform
         )
 
-        #log("sadfasdfasdfsadfsdfasdfasdfasdfsdfasdf")
+        log("sadfasdfasdfsadfsdfasdfasdfasdfsdfasdf")
         
     def train_dataloader(self):
         return torch.utils.data.DataLoader(
