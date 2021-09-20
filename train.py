@@ -107,7 +107,7 @@ class CustomDataModule(pytorch_lightning.LightningDataModule):
         self.video_path = f"{ROOT_PATH}/data/{data_version}"
 
         splits = pd.read_csv("splits.csv")
-        all_files = set(os.listdir(f"{video_path}/0"))
+        all_files = set(os.listdir(f"{self.video_path}/0"))
         splits = splits[splits.filename.isin(all_files)].copy()
 
         dev_data = splits[splits.split == "dev"]
