@@ -36,11 +36,9 @@ class CustomVideoDataset(torch.utils.data.Dataset):
         self._augmentation = augmentation
         
     def __len__(self):
-        log("=" * 25)
         return len(self._data_frame)
     
     def __getitem__(self, video_index):
-        log(video_index, len(self._data_frame))
         if video_index == len(self._data_frame) - 1:
             log("=" * 25)
 
