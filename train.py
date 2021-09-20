@@ -337,7 +337,7 @@ def main(args):
     best_path = f"{ROOT_PATH}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     classification_module.load_state_dict(state_dict)
-    """trainer.test(classification_module, [data_module.test_dataloader()])"""
+    trainer.test(classification_module, [data_module.test_dataloader()])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some integers.')
