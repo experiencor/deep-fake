@@ -36,7 +36,7 @@ SEED                = 100
 EPOCH               = 8
 FRAME_NUMBER        = 32
 PREFETCH_FACTOR     = 2
-NUM_WORKERS         = 2
+NUM_WORKERS         = 4
 
 
 # dataset configuration
