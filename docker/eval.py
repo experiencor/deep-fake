@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from argparse import ArgumentParser
 from pytorch_lightning.core.lightning import LightningModule
 import numpy as np
-from custom_labeled_dataset import CustomVideoDataset
+from .custom_labeled_dataset import CustomVideoDataset
 from pynvml import *
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
