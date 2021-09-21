@@ -1,9 +1,9 @@
 {
     "frame_number": 4,
-    "frame_size": 4,
+    "frame_size": 224,
     "lr": 1e-4,
     "seed": 100,
-    "device": "cpu",
+    "device": "cuda",
     "batch_size": 8,
     "image_size": 224,
     "root_path": "/data/projects/deepfake/",

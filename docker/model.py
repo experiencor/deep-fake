@@ -92,7 +92,8 @@ class Model(LightningModule):
             })
         self.log("val/auc", auc, sync_dist=True)
     
-    def test_step(self, batch, _):            
+    def test_step(self, batch, _):
+        print(batch)    
         logits = self.model(batch["video"])
         test_auc.update(calc_prob(logits), batch["label"])
     
@@ -105,6 +106,10 @@ class Model(LightningModule):
                 "test/auc": auc
             })
         self.log("test/auc", auc, sync_dist=True)
+
+
+    def predict_step(self, batch, _):
+        return self(batch["video"])
         
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(

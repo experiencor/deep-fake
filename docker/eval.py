@@ -38,13 +38,15 @@ def main(input_dir, output_file):
         f"python crop.py "
         f"--workers {num_crop_workers} "
         f"--input {input_dir} "
-        f"--output /data/faces"
+        f"--output /data/faces "
+        #f"--save-image "
+        #f"--no-cache "
     )
     avg_crop_time = (time.time() - tik) / len(test_videos)
     logging.warning(
         f'Face cropping completed! Average crop time: '
         f'{avg_crop_time} for {len(test_videos)} videos.')
-    time.sleep(15)
+    #time.sleep(10)
 
     face_count = 0
     for face in os.listdir("/data/faces/0/"):
@@ -91,6 +93,7 @@ def main(input_dir, output_file):
             prefetch_factor=2,
         )
 
+        #trainer.test(model, [test_dataloader])
         logits = trainer.predict(model, test_dataloader)
         logits = torch.cat(logits)
         probs  = calc_prob(logits)

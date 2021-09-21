@@ -156,7 +156,7 @@ def main(args):
     for _ in range(args.workers):
         process = Process(target=worker, args=(
             args.output, 
-            args.image, 
+            args.save_image, 
             args.no_cache,
             config['num_eval_iters'],
             config['device'],
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     parser.add_argument("--workers",    type=int,   required=True, help="Number of workers")
     parser.add_argument("--input",      type=str,   required=True, help="Input directory of raw videos")
     parser.add_argument("--output",     type=str,   required=True, help="Output directory of faces")
-    parser.add_argument("--image",      action='store_true')
+    parser.add_argument("--save-image",      action='store_true')
     parser.add_argument("--no-cache",   action='store_true')
 
     args = parser.parse_args()
