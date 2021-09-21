@@ -37,8 +37,7 @@ class Dataset(torch.utils.data.Dataset):
         for _, raw_frame in enumerate(raw_frames):
             frame = self._augmentation(image = raw_frame)["image"]
             frames += [frame]
-            print("sdfsdf")
-            cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
+            #cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
         missing_frames = self._frame_number - len(frames)
         frames = torch.tensor(np.stack(frames))
         frames = torch.nn.functional.pad(
