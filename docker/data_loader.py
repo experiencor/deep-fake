@@ -25,7 +25,6 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             data_frame=self.train_data,
             video_path_prefix=f"{self.video_path}/0",
             frame_number=frame_number,
-            frame_size=frame_size,
             transform=transform,
             augmentation=train_aug,
         )
@@ -33,14 +32,12 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             data_frame=dev_data,
             video_path_prefix=f"{self.video_path}/0",
             frame_number=frame_number,
-            frame_size=frame_size,
             transform=transform
         )
         self.test_dataset = Dataset(
             data_frame=test_data,
             video_path_prefix=f"{self.video_path}/0",
             frame_number=frame_number,
-            frame_size=frame_size,
             transform=transform
         )
 
