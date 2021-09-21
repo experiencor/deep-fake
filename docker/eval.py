@@ -39,8 +39,8 @@ def main(input_dir, output_file):
         f"--workers {num_crop_workers} "
         f"--input {input_dir} "
         f"--output /data/faces "
-        #f"--save-image "
-        #f"--no-cache "
+        f"--save-image "
+        f"--no-cache "
     )
     avg_crop_time = (time.time() - tik) / len(test_videos)
     logging.warning(
