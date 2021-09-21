@@ -28,9 +28,8 @@ def main(args):
         "max_lr":           config["lr"]
     }
     run = wandb.init(project="deepfake", config=wandb_config)
-    time.sleep(10)
     print(run.name)
-    
+    """
     # set up the data
     data_module = DataLoader(
         args.data_version,
@@ -82,7 +81,7 @@ def main(args):
     best_path = f"{config['root_path']}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
-    trainer.test(model, [data_module.test_dataloader()])
+    trainer.test(model, [data_module.test_dataloader()])"""
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some integers.')
