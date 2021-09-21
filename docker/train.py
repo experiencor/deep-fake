@@ -2,6 +2,7 @@ import pytorch_lightning
 import torch.utils.data
 import torch
 import time
+import pandas as pd
 from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
 from utils import log, set_seed, calc_prob, predict
@@ -81,12 +82,14 @@ def main(args):
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
 
+    print(data_module.test_dataloader().dataset)
     trainer.test(model, [data_module.test_dataloader()])
     val_probs  = predict(trainer, model, data_module.val_dataloader()).cpu().detach().numpy()
     test_probs = predict(trainer, model, data_module.test_dataloader()).cpu().detach().numpy()
-    print(val_probs, data_module.val_dataset)
-    for prob, example in zip(val_probs, data_module.val_dataset):
-        print(prob, example["filename"])
+
+    val_logits = pd.read_csv([{"filename": example["filename"], "prob": prob} \
+        for prob, example in zip(val_probs, data_module.val_dataset)])
+    val_logits.to_csv("val_logits.csv", index=False)
     
 
 if __name__ == "__main__":
