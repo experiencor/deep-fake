@@ -5,7 +5,7 @@ import time
 import pandas as pd
 from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
-from utils import log, set_seed, calc_prob, predict
+from utils import log, set_seed, predict
 import numpy as np
 import wandb
 from data_loader import DataLoader
@@ -80,7 +80,7 @@ def main(args):
     best_path = f"{config['root_path']}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
-    
+
     trainer.test(model, [data_module.test_dataloader()])
     val_preds  = pd.DataFrame(predict(trainer, model, data_module.val_dataloader()))
     test_preds = pd.DataFrame(predict(trainer, model, data_module.test_dataloader()))
