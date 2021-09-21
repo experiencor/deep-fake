@@ -80,13 +80,9 @@ def main(args):
     best_path = f"{config['root_path']}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
-    set_seed(config["seed"])
+    
     trainer.test(model, [data_module.test_dataloader()])
-
-    set_seed(config["seed"])
     val_preds  = pd.DataFrame(predict(trainer, model, data_module.val_dataloader()))
-
-    set_seed(config["seed"])
     test_preds = pd.DataFrame(predict(trainer, model, data_module.test_dataloader()))
 
     val_preds.to_csv("val_preds.txt", index=False)
