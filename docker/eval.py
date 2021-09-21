@@ -39,8 +39,8 @@ def main(input_dir, output_file):
         f"--workers {num_crop_workers} "
         f"--input {input_dir} "
         f"--output /data/faces "
-        f"--save-image "
-        f"--no-cache "
+        #f"--save-image "
+        #f"--no-cache "
     )
     avg_crop_time = (time.time() - tik) / len(test_videos)
     logging.warning(
@@ -81,7 +81,6 @@ def main(input_dir, output_file):
             data_frame=pd.read_csv("test.csv"),
             video_path_prefix=f"/data/faces/{iteration}",
             frame_number=config['frame_number'],
-            frame_size=config['frame_size'],
             transform=transform
         )
         test_dataloader = torch.utils.data.DataLoader(

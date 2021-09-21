@@ -31,7 +31,10 @@ class Dataset(torch.utils.data.Dataset):
         filename = data_row["filename"] 
         label = int(data_row["label"])
 
-        frames = np.load(f"{self._video_path_prefix}/{filename}.npy")
+        raw_frames = np.load(f"{self._video_path_prefix}/{filename}.npy")
+        frames = []
+        for raw_frame in raw_frames:
+            frames += [self._augmentation(image = raw_frame)["image"]]
         missing_frames = self._frame_number - len(frames)
         frames = torch.tensor(np.stack(frames))
         frames = torch.nn.functional.pad(
