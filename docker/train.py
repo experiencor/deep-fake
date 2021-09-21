@@ -85,6 +85,8 @@ def main(args):
     val_probs  = predict(trainer, model, data_module.val_dataloader())
     test_probs = predict(trainer, model, data_module.test_dataloader())
     print(val_probs, data_module.val_dataset)
+    for abc in zip(val_probs, data_module.val_dataset):
+        print(abc)
     
 
 if __name__ == "__main__":
