@@ -4,6 +4,7 @@ from typing import Any, Callable, Optional
 import numpy as np
 import torch
 from utils import log
+import cv2
 import torch.utils.data
 
 
@@ -33,9 +34,11 @@ class Dataset(torch.utils.data.Dataset):
 
         raw_frames = np.load(f"{self._video_path_prefix}/{filename}.npy")
         frames = []
-        for raw_frame in raw_frames:
-            frames += [self._augmentation(image = raw_frame)["image"]]
+        for _, raw_frame in enumerate(raw_frames):
+            frame = self._augmentation(image = raw_frame)["image"]
+            frames += [frame]
             print("sdfsdf")
+            cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
         missing_frames = self._frame_number - len(frames)
         frames = torch.tensor(np.stack(frames))
         frames = torch.nn.functional.pad(
