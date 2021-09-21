@@ -7,7 +7,7 @@
     "batch_size": 8,
     "image_size": 224,
     "root_path": "/data/projects/deepfake/",
-    "epoch": 32,
+    "epoch": 3,
     "num_eval_workers": 4,
     "crop_batch_size": 4,
     "num_crop_workers": 1,

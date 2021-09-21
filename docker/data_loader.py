@@ -69,7 +69,6 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             sampler=torch.utils.data.SequentialSampler(self.val_dataset),
             num_workers=4,
             prefetch_factor=2,
-            worker_init_fn=set_seed
         )
     
     def test_dataloader(self):
@@ -79,7 +78,6 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             sampler=torch.utils.data.SequentialSampler(self.test_dataset),
             num_workers=4,
             prefetch_factor=2,
-            worker_init_fn=set_seed
         )
 
     def get_trainset_size(self):

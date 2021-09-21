@@ -8,42 +8,16 @@ import pandas as pd
 import logging
 from argparse import ArgumentParser
 import numpy as np
-from custom_labeled_dataset import CustomVideoDataset
+from dataset import Dataset
 import json
 from pynvml import *
 from model import Model
 
 
-config = json.load(open("config.json"))
-
-
-class CustomDataModule(pytorch_lightning.LightningDataModule):
-    def __init__(self, input_dir):
-        super().__init__()
-        test_data = pd.read_csv("test.csv")
-        self.test_dataset = CustomVideoDataset(
-            data_frame=test_data,
-            video_path_prefix=f"/data/faces/0",
-            frame_number=FRAME_NUMBER,
-            frame_size=FRAME_SIZE,
-            transform=transform
-        )
-    
-    def test_dataloader(self):
-        return torch.utils.data.DataLoader(
-            self.test_dataset,
-            batch_size=EVAL_BATCH_SIZE,
-            sampler=torch.utils.data.SequentialSampler(self.test_dataset),
-            num_workers=EVAL_NUM_WORKERS,
-            prefetch_factor=PREFETCH_FACTOR,
-            worker_init_fn=set_seed
-        )
-
-
 def main(input_dir, output_file):
+    config = json.load(open("config.json"))
     if not os.path.exists("/data/faces"):
         os.mkdir("/data/faces")
-            
     num_gpu = 0 if config["device"] == "cpu" else torch.cuda.device_count()
 
     # read the video files and make the test file
@@ -76,7 +50,7 @@ def main(input_dir, output_file):
         return
     
     # create the model and load the weights
-    model = Model()
+    model = Model(0, 0)
     
     if num_gpu == 0:
         pretrain = torch.load("model.ckpt", map_location=torch.device('cpu'))
@@ -93,14 +67,27 @@ def main(input_dir, output_file):
         num_sanity_val_steps=0,
         gpus=num_gpu
     )
-    
-    # perform predictions
-    set_seed(SEED)
 
-    data_module = CustomDataModule(input_dir)
+    # perform predictions
+    set_seed(config["seed"])
     final_results = []
-    for _ in range(1):
-        logits = trainer.predict(model, data_module.test_dataloader())
+    for iteration in range(1):
+        test_dataset = Dataset(
+            data_frame="test.csv",
+            video_path_prefix=f"/data/faces/{iteration}",
+            frame_number=config['frame_number'],
+            frame_size=config['frame_size'],
+            transform=transform
+        )
+        test_dataloader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=config['batch_size'],
+            sampler=torch.utils.data.SequentialSampler(test_dataset),
+            num_workers=4,
+            prefetch_factor=2,
+        )
+
+        logits = trainer.predict(model, test_dataloader)
         logits = torch.cat(logits)
         probs  = calc_prob(logits)
         final_results += [probs]
