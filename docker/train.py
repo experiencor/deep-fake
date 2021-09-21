@@ -81,14 +81,16 @@ def main(args):
     best_path = f"{config['root_path']}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
-
     trainer.test(model, [data_module.test_dataloader()])
+
     val_preds  = pd.DataFrame(predict(trainer, model, data_module.val_dataloader()))
     test_preds = pd.DataFrame(predict(trainer, model, data_module.test_dataloader()))
+
     val_preds.to_csv("val_preds.txt", index=False)
-    #test_preds.to_csv("test_preds.csv", index=False)
+    test_preds.to_csv("test_preds.txt", index=False)
 
     wandb.save("val_preds.txt")
+    wandb.save("test_preds.txt")
     
 
 if __name__ == "__main__":
