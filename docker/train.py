@@ -86,10 +86,10 @@ def main(args):
     val_probs  = predict(trainer, model, data_module.val_dataloader()).cpu().detach().numpy()
     test_probs = predict(trainer, model, data_module.test_dataloader()).cpu().detach().numpy()
 
-    val_logits = pd.read_csv([{"filename": example, "prob": prob} \
-        for prob, example in zip(val_probs, data_module.val_dataloader())])
+    #val_logits = pd.read_csv([{"filename": example, "prob": prob} \
+    #    for prob, example in zip(val_probs, data_module.val_dataloader())])
     print(val_logits)
-    val_logits.to_csv("val_logits.csv", index=False)
+    #val_logits.to_csv("val_logits.csv", index=False)
     
 
 if __name__ == "__main__":
