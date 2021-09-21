@@ -28,6 +28,7 @@ def main(args):
         "max_lr":           config["lr"]
     }
     run = wandb.init(project="deepfake", config=wandb_config)
+    print(run.name)
     
     # set up the data
     data_module = DataLoader(
@@ -61,7 +62,7 @@ def main(args):
         save_top_k=1,
         mode="max",
     )
-    
+
     trainer = pytorch_lightning.Trainer(
         num_sanity_val_steps=0,
         max_epochs=config["epoch"],
