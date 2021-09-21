@@ -54,7 +54,7 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             self.train_dataset,
             batch_size=self.batch_size,
             sampler=torch.utils.data.RandomSampler(self.train_dataset),
-            num_workers=4,
+            num_workers=16,
             prefetch_factor=1,
             worker_init_fn=set_seed
         )
