@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import pickle
 import os
-from .utils import log
+from utils import log
 
 import torch.utils.data
 
