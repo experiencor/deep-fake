@@ -88,7 +88,7 @@ def main(args):
 
     #val_logits = pd.read_csv([{"filename": example, "prob": prob} \
     #    for prob, example in zip(val_probs, data_module.val_dataloader())])
-    print(val_logits)
+    print(data_module.val_dataloader().dataset)
     #val_logits.to_csv("val_logits.csv", index=False)
     
 
