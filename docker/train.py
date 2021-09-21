@@ -86,7 +86,7 @@ def main(args):
     val_preds  = predict(trainer, model, data_module.val_dataloader())
     test_preds = predict(trainer, model, data_module.test_dataloader())
 
-    val_preds = pd.DataFrame(val_preds).transpose()
+    val_preds = pd.DataFrame(val_preds)
     print(val_preds)
     
 
