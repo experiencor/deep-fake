@@ -88,7 +88,7 @@ def main(args):
     #val_preds.to_csv("val_preds.csv", index=False)
     #test_preds.to_csv("test_preds.csv", index=False)
 
-    wandb.log({"val_preds": val_preds}
+    wandb.log({"val_preds": val_preds})
     
 
 if __name__ == "__main__":
