@@ -45,7 +45,8 @@ class Dataset(torch.utils.data.Dataset):
         sample_dict = {
             "video": frames,
             "label": label,
-            "video_index": video_index
+            "video_index": video_index,
+            "filename": filename
         }
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)
