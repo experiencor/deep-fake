@@ -64,7 +64,7 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             self.val_dataset,
             batch_size=self.batch_size,
             sampler=torch.utils.data.SequentialSampler(self.val_dataset),
-            num_workers=4,
+            num_workers=16,
             prefetch_factor=1,
         )
     
