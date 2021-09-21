@@ -85,10 +85,10 @@ def main(args):
     trainer.test(model, [data_module.test_dataloader()])
     val_preds  = pd.DataFrame(predict(trainer, model, data_module.val_dataloader()))
     test_preds = pd.DataFrame(predict(trainer, model, data_module.test_dataloader()))
-    #val_preds.to_csv("val_preds.csv", index=False)
+    val_preds.to_csv("val_preds.csv", index=False)
     #test_preds.to_csv("test_preds.csv", index=False)
 
-    wandb.log({"val_preds": val_preds})
+    wandb.save("val_preds.csv")
     
 
 if __name__ == "__main__":
