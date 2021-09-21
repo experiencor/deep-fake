@@ -3,7 +3,7 @@
     "frame_size": 4,
     "lr": 1e-4,
     "seed": 100,
-    "device": "gpu",
+    "device": "cpu",
     "batch_size": 8,
     "image_size": 224,
     "root_path": "/data/projects/deepfake/",

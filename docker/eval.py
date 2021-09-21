@@ -2,6 +2,7 @@ import os
 import pytorch_lightning
 import torch.utils.data
 import torch
+import pandas as pd
 import time
 from utils import log, calc_prob, set_seed, transform, compute_num_crop_workers
 import pandas as pd
@@ -34,8 +35,11 @@ def main(input_dir, output_file):
     num_crop_workers = compute_num_crop_workers()
     log(f"num_crop_workers: {num_crop_workers}")
     os.system(
-        f"python crop.py --workers {num_crop_workers} --num-iters {config['num_eval_iters']} "
-        f"--input {input_dir} --output /data/faces")
+        f"python crop.py "
+        f"--workers {num_crop_workers} "
+        f"--input {input_dir} "
+        f"--output /data/faces"
+    )
     avg_crop_time = (time.time() - tik) / len(test_videos)
     logging.warning(
         f'Face cropping completed! Average crop time: '
@@ -73,7 +77,7 @@ def main(input_dir, output_file):
     final_results = []
     for iteration in range(1):
         test_dataset = Dataset(
-            data_frame="test.csv",
+            data_frame=pd.read_csv("test.csv"),
             video_path_prefix=f"/data/faces/{iteration}",
             frame_number=config['frame_number'],
             frame_size=config['frame_size'],

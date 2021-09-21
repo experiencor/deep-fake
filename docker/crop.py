@@ -3,27 +3,25 @@ import cv2
 import os
 import torch
 from facenet_pytorch import MTCNN
-import logging
 from multiprocessing import Process, JoinableQueue
-import pickle
 import traceback
+import json
 import numpy as np
 from argparse import ArgumentParser
 from utils import log, create_folder
 import hashlib
-from eval import FRAME_NUMBER, FRAME_SIZE, CROP_BATCH_SIZE, CROP_THRESHOLD, DEVICE
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
 fail_queue = JoinableQueue()
 
 
-def apply_crop(frame, boxes, probs, margin=0.5):
+def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
     if boxes is None:
         return frame, 0
 
-    boxes = [box for box, prob in zip(boxes, probs) if prob > CROP_THRESHOLD]
-    probs = [prob for prob in probs if prob > CROP_THRESHOLD]
+    boxes = [box for box, prob in zip(boxes, probs) if prob > crop_threshold]
+    probs = [prob for prob in probs if prob > crop_threshold]
 
     if not boxes:
         return frame, 0
@@ -44,11 +42,11 @@ def apply_crop(frame, boxes, probs, margin=0.5):
     return frame[y:t, x:z, :], probs[face_idx]
 
 
-def crop_faces(mtcnn, frames):
+def crop_faces(mtcnn, frames, frame_size, crop_batch_size=4):
     all_boxes, all_probs = [], []
 
-    for i in range(int(np.ceil(len(frames)/CROP_BATCH_SIZE))):
-        batch = frames[i*CROP_BATCH_SIZE: (i+1)*CROP_BATCH_SIZE]
+    for i in range(int(np.ceil(len(frames)/crop_batch_size))):
+        batch = frames[i*crop_batch_size: (i+1)*crop_batch_size]
         boxes, probs = mtcnn.detect(batch)
         all_boxes += list(boxes)
         all_probs += list(probs)
@@ -56,19 +54,19 @@ def crop_faces(mtcnn, frames):
     return_faces, return_probs = [], []
     for frame, boxes, probs in zip(frames, all_boxes, all_probs):
         face, prob = apply_crop(frame, boxes, probs)
-        face = cv2.resize(face, (FRAME_SIZE, FRAME_SIZE))
+        face = cv2.resize(face, (frame_size, frame_size))
         return_faces += [face]
         return_probs += [prob]
     
     return return_faces, return_probs
     
 
-def worker(output_dir, num_iters, save_image, no_cache):
+def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, frame_size):
     mtcnn = MTCNN(
         margin = 14,
         factor = 0.6,
         keep_all = True,
-        device = DEVICE if torch.cuda.is_available() else "cpu"
+        device = device if torch.cuda.is_available() else "cpu"
     )
     
     while True:
@@ -92,7 +90,7 @@ def worker(output_dir, num_iters, save_image, no_cache):
                 video = cv2.VideoCapture(file_path)
                 
                 frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-                total_count = num_iters * FRAME_NUMBER
+                total_count = num_iters * frame_number
                 if total_count <= frame_count:
                     chosen_indices = np.random.choice(range(frame_count), total_count, replace=False)
                 else:
@@ -109,12 +107,11 @@ def worker(output_dir, num_iters, save_image, no_cache):
                     status = video.grab()
                     i += 1
 
-                faces, probs = crop_faces(mtcnn, frames)
+                faces, probs = crop_faces(mtcnn, frames, frame_size)
 
-                iter_face_count = len(faces) // num_iters
                 random_indices  = np.arange(len(faces))
-                l_idx, r_idx    = 0, FRAME_NUMBER
-                increment       = (len(faces) + 1 - FRAME_NUMBER) // num_iters
+                l_idx, r_idx    = 0, frame_number
+                increment       = (len(faces) + 1 - frame_number) // num_iters
                 np.random.shuffle(random_indices)
                 for iteration in range(num_iters):
                     iter_path = f"{output_dir}/{iteration}"
@@ -134,7 +131,7 @@ def worker(output_dir, num_iters, save_image, no_cache):
                             cv2.imwrite(f"{image_path}/{i}_{prob}.png", face)
 
                     l_idx += increment
-                    r_idx  = l_idx + FRAME_NUMBER
+                    r_idx  = l_idx + frame_number
         except Exception as e:
             queue.put(file_path)
             fail_queue.put(file_path)
@@ -147,7 +144,8 @@ def worker(output_dir, num_iters, save_image, no_cache):
         queue.task_done()
         
 
-def main(args):    
+def main(args):
+    config = json.load(open("config.json"))
     create_folder(args.output)
 
     for f in os.listdir(args.input):
@@ -155,8 +153,16 @@ def main(args):
             queue.put(f"{args.input}/{f}")
 
     workers = []
-    for i in range(args.workers):
-        process = Process(target=worker, args=(args.output, args.num_iters, args.image, args.no_cache))
+    for _ in range(args.workers):
+        process = Process(target=worker, args=(
+            args.output, 
+            args.image, 
+            args.no_cache,
+            config['num_eval_iters'],
+            config['device'],
+            config['frame_number'],
+            config['frame_size']
+        ))
         process.start()
         workers.append(process)
     queue.join()
@@ -170,10 +176,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--workers",    type=int,  required=True, help="Number of workers")
-    parser.add_argument("--num-iters",  type=int,  required=True, help="Number of iterations")
-    parser.add_argument("--input",      type=str,  required=True, help="Input directory of raw videos")
-    parser.add_argument("--output",     type=str,  required=True, help="Output directory of faces")
+    parser.add_argument("--workers",    type=int,   required=True, help="Number of workers")
+    parser.add_argument("--input",      type=str,   required=True, help="Input directory of raw videos")
+    parser.add_argument("--output",     type=str,   required=True, help="Output directory of faces")
     parser.add_argument("--image",      action='store_true')
     parser.add_argument("--no-cache",   action='store_true')
 
