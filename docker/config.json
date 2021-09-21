@@ -4,14 +4,11 @@
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
-    "batch_size": 84,
+    "train_batch_size": 84,
+    "eval_batch_size": 4,
     "image_size": 224,
     "weight_path": "/data/projects/deepfake/",
     "data_path": "/home/utopia/projects/deepfake/",
     "epoch": 32,
-    "num_eval_workers": 4,
-    "crop_batch_size": 4,
-    "num_crop_workers": 1,
-    "crop_threshold": 0.975,
     "num_eval_iters": 4
 }

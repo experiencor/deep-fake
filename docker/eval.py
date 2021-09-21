@@ -4,9 +4,9 @@ import torch.utils.data
 import torch
 import pandas as pd
 import time
-from utils import log, calc_prob, transform, compute_num_crop_workers
+from utils import log, transform, compute_num_crop_workers, predict
+from sklearn import metrics
 import pandas as pd
-import logging
 from argparse import ArgumentParser
 import numpy as np
 from dataset import Dataset
@@ -21,13 +21,13 @@ def main(input_dir, output_file):
         os.mkdir("/data/faces")
     num_gpu = 0 if config["device"] == "cpu" else torch.cuda.device_count()
 
-    # read the video files and make the test file
+    # read the video files
     test_videos = [video for video in os.listdir(input_dir) if ".mp4" in video]
     test_data = pd.DataFrame({
         "filename": test_videos,
         "label": [1] * len(test_videos)
     })
-    test_data.to_csv("test.csv", index=False)
+    test_data.to_csv("test.csv", index=False)    
 
     # crop the faces from the videos    
     log("cropping videos")
@@ -43,10 +43,8 @@ def main(input_dir, output_file):
         #f"--no-cache "
     )
     avg_crop_time = (time.time() - tik) / len(test_videos)
-    logging.warning(
-        f'Face cropping completed! Average crop time: '
-        f'{avg_crop_time} for {len(test_videos)} videos.')
-    #time.sleep(10)
+    log(f'Face cropping completed! Average crop time: {avg_crop_time} for {len(test_videos)} videos.')
+    time.sleep(10)
 
     face_count = 0
     for face in os.listdir("/data/faces/0/"):
@@ -75,8 +73,8 @@ def main(input_dir, output_file):
     )
 
     # perform predictions
-    final_results = []
-    for iteration in range(1):
+    final_probs = []
+    for iteration in range(4):
         test_dataset = Dataset(
             data_frame=pd.read_csv("test.csv"),
             video_path_prefix=f"/data/faces/{iteration}",
@@ -85,22 +83,35 @@ def main(input_dir, output_file):
         )
         test_dataloader = torch.utils.data.DataLoader(
             test_dataset,
-            batch_size=config['batch_size'],
+            batch_size=config['eval_batch_size'],
             sampler=torch.utils.data.SequentialSampler(test_dataset),
-            num_workers=4,
+            num_workers=2,
             prefetch_factor=2,
         )
 
-        #trainer.test(model, [test_dataloader])
-        logits = trainer.predict(model, test_dataloader)
-        logits = torch.cat(logits)
-        probs  = calc_prob(logits)
-        final_results += [probs]
-    final_results = torch.mean(torch.stack(final_results), dim=0).cpu().detach().numpy()
+        probs = predict(trainer, model, test_dataloader)
+        probs = np.array([res["prob"] for res in probs])
+        final_probs += [probs]
+    final_probs = np.mean(np.stack(final_probs), axis=0)
+
     
     # create output and write the ouput as csv
-    output_df = pd.DataFrame({"filename": test_videos, "probability": final_results})
-    output_df.to_csv(output_file, index=False)
+    result = pd.DataFrame({"filename": test_videos, "probability": final_probs})
+
+    label_file = f"{input_dir}/label.csv"
+    if os.path.exists(label_file):
+        label = pd.read_csv(label_file)
+        if set(label["filename"]) == set(result["filename"]):
+            merged = pd.merge(result, label, on="filename")
+            fpr, tpr, _ = metrics.roc_curve(
+                merged.label, 
+                merged.probability, 
+                pos_label=1
+            )
+            auc = metrics.auc(fpr, tpr)
+            log("test auc:", auc)
+
+    result.to_csv(output_file, index=False)
 
 if __name__ == "__main__":
     parser = ArgumentParser()

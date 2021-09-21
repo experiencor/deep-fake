@@ -167,7 +167,7 @@ def main(args):
         workers.append(process)
     queue.join()
 
-    for i in range(args.workers):
+    for _ in range(args.workers):
         queue.put(None)
 
     for w in workers:

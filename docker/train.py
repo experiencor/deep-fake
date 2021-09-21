@@ -24,7 +24,7 @@ def main(args):
         "code_version":     args.code_version,
         "pret_version":     args.pret_version,
         "num_gpu":          num_gpu,
-        "batch_size":       config["batch_size"] * num_gpu,
+        "batch_size":       config["train_batch_size"] * num_gpu,
         "image_size":       config["image_size"],
         "max_lr":           config["lr"]
     }
@@ -36,11 +36,11 @@ def main(args):
         config["data_path"],
         config["frame_number"], 
         config["frame_size"],
-        config["batch_size"]
+        config["train_batch_size"]
     )        
 
     # create the model
-    total_steps = config["epoch"] * int(np.ceil(data_module.get_trainset_size() / config["batch_size"]))
+    total_steps = config["epoch"] * int(np.ceil(data_module.get_trainset_size() / config["train_batch_size"]))
     model = Model(
         total_steps=total_steps,
         lr=config['lr']

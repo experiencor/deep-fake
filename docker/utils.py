@@ -21,7 +21,7 @@ from torchvision.transforms import (
 train_aug = A.Compose([
     A.ImageCompression(quality_lower=60, quality_upper=100, p=0.5),
     A.GaussNoise(p=0.1),
-    A.GaussianBlur(blur_limit=3, p=0.05),
+    A.GaussianBlur(blur_limit=(3,3), p=0.05),
     A.HorizontalFlip(),
     A.OneOf([
             A.RandomBrightnessContrast(), 
