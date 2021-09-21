@@ -82,7 +82,7 @@ def predict(trainer, model, dataloader):
     logits = trainer.predict(model, dataloader)
     logits = torch.cat(logits)
     probs  = calc_prob(logits).cpu().detach().numpy()
-    predictions = [{"filename": example, "prob": prob} \
+    predictions = [{"filename": example["filename"], "prob": prob} \
         for prob, example in zip(probs, dataloader.dataset)]
     return predictions
     
