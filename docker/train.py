@@ -83,11 +83,12 @@ def main(args):
     model.load_state_dict(state_dict)
 
     trainer.test(model, [data_module.test_dataloader()])
-    val_preds  = predict(trainer, model, data_module.val_dataloader())
-    test_preds = predict(trainer, model, data_module.test_dataloader())
+    val_preds  = pd.DataFrame(predict(trainer, model, data_module.val_dataloader()))
+    test_preds = pd.DataFrame(predict(trainer, model, data_module.test_dataloader()))
+    #val_preds.to_csv("val_preds.csv", index=False)
+    #test_preds.to_csv("test_preds.csv", index=False)
 
-    val_preds = pd.DataFrame(val_preds)
-    print(val_preds)
+    wandb.log({"val_preds": val_preds}
     
 
 if __name__ == "__main__":
