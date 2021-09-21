@@ -4,7 +4,7 @@
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
-    "batch_size": 8,
+    "batch_size": 84,
     "image_size": 224,
     "weight_path": "/data/projects/deepfake/",
     "data_path": "/home/utopia/projects/deepfake/",
