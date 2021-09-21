@@ -27,7 +27,6 @@ class Dataset(torch.utils.data.Dataset):
         return len(self._data_frame)
     
     def __getitem__(self, video_index):
-        print(video_index)
         data_row = self._data_frame.iloc[video_index]
         filename = data_row["filename"] 
         label = int(data_row["label"])
