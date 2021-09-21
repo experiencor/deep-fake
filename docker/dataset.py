@@ -14,14 +14,12 @@ class Dataset(torch.utils.data.Dataset):
         video_path_prefix: str = "",
         transform: Optional[Callable[[dict], Any]] = None,
         frame_number: int = 32,
-        frame_size: int = 224,
         augmentation = None,
     ) -> None:
         self._epoch = 0
         self._data_frame = data_frame
         self._transform = transform
         self._frame_number = frame_number
-        self._frame_size = frame_size
         self._video_path_prefix = video_path_prefix
         self._augmentation = augmentation        
         
