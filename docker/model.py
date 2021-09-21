@@ -93,7 +93,6 @@ class Model(LightningModule):
         self.log("val/auc", auc, sync_dist=True)
     
     def test_step(self, batch, _):
-        print(batch)    
         logits = self.model(batch["video"])
         test_auc.update(calc_prob(logits), batch["label"])
     

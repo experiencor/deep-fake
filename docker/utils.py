@@ -77,4 +77,9 @@ def compute_num_crop_workers(each_worker=4):
     info = nvmlDeviceGetMemoryInfo(h)
     free = info.free/1e9
     return int(np.ceil((free / each_worker)))
+
+def predict(trainer, model, dataloader):
+    logits = trainer.predict(model, dataloader)
+    logits = torch.cat(logits)
+    return calc_prob(logits)
     

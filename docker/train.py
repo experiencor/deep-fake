@@ -4,7 +4,7 @@ import torch
 import time
 from pytorch_lightning.callbacks import ModelCheckpoint
 import argparse
-from utils import log, set_seed
+from utils import log, set_seed, calc_prob, predict
 import numpy as np
 import wandb
 from data_loader import DataLoader
@@ -73,14 +73,19 @@ def main(args):
     
     # start training and validating
     trainer.fit(model, data_module)
-    time.sleep(10)
+    #time.sleep(10)
 
     # perform evaluation on the test set
     set_seed(config["seed"])
     best_path = f"{config['root_path']}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
+
     trainer.test(model, [data_module.test_dataloader()])
+    val_probs  = predict(trainer, model, data_module.val_dataloader())
+    test_probs = predict(trainer, model, data_module.val_dataloader())
+    print(val_probs)
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some integers.')
