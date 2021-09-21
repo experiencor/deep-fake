@@ -28,7 +28,6 @@ def main(args):
         "max_lr":           config["lr"]
     }
     run = wandb.init(project="deepfake", config=wandb_config)
-    print(run.name)
     
     # set up the data
     data_module = DataLoader(
