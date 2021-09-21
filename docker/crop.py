@@ -96,7 +96,6 @@ def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, fr
                 else:
                     chosen_indices = np.range(frame_count)
                 chosen_indices = sorted(chosen_indices)
-                log(file_name, chosen_indices)
 
                 frames = []
                 i, j, status = 0, 0, video.grab()

@@ -4,7 +4,7 @@ import torch.utils.data
 import torch
 import pandas as pd
 import time
-from utils import log, calc_prob, set_seed, transform, compute_num_crop_workers
+from utils import log, calc_prob, transform, compute_num_crop_workers
 import pandas as pd
 import logging
 from argparse import ArgumentParser
@@ -75,7 +75,6 @@ def main(input_dir, output_file):
     )
 
     # perform predictions
-    set_seed(config["seed"])
     final_results = []
     for iteration in range(1):
         test_dataset = Dataset(
