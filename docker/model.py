@@ -38,6 +38,7 @@ class Model(LightningModule):
         return self.model(x)
 
     def training_step(self, batch, _):
+        print(batch["filename"])
         opt = self.optimizers()        
         opt.zero_grad()
         
