@@ -33,7 +33,7 @@ def main(args):
     # set up the data
     data_module = DataLoader(
         args.data_version,
-        config["root_path"],
+        config["data_path"],
         config["frame_number"], 
         config["frame_size"],
         config["batch_size"]
@@ -47,7 +47,7 @@ def main(args):
     )
 
     # load the pretrain weight
-    pretrain = torch.load(f"{config['root_path']}/pretrain/{args.pret_version}/model.ckpt")
+    pretrain = torch.load(f"{config['weight_path']}/pretrain/{args.pret_version}/model.ckpt")
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
     missing_keys, unexpected_keys = model.load_state_dict(pretrain)
@@ -57,7 +57,7 @@ def main(args):
     # setup the trainer
     checkpoint_callback = ModelCheckpoint(
         monitor="val/auc",
-        dirpath=f"{config['root_path']}/output/{run.id}",
+        dirpath=f"{config['weight_path']}/output/{run.id}",
         filename="model",
         save_top_k=1,
         mode="max",
@@ -77,7 +77,7 @@ def main(args):
     #time.sleep(10)
 
     # perform evaluation on the test set
-    best_path = f"{config['root_path']}/output/{run.id}/model.ckpt"
+    best_path = f"{config['weight_path']}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
 
