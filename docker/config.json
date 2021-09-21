@@ -4,7 +4,7 @@
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
-    "batch_size": 32,
+    "batch_size": 64,
     "image_size": 224,
     "root_path": "/data/projects/deepfake/",
     "epoch": 32,
