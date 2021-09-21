@@ -27,7 +27,7 @@ def main(args):
         "image_size":       config["image_size"],
         "max_lr":           config["lr"]
     }
-    run = wandb.init(project="deepfake", config=wandb_config)
+    run = wandb.init(project="deepfake")
     print(run.name)
     """
     # set up the data
