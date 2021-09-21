@@ -83,8 +83,8 @@ def main(args):
 
     trainer.test(model, [data_module.test_dataloader()])
     val_probs  = predict(trainer, model, data_module.val_dataloader())
-    test_probs = predict(trainer, model, data_module.val_dataloader())
-    print(val_probs)
+    test_probs = predict(trainer, model, data_module.test_dataloader())
+    print(val_probs, data_module.val_dataset)
     
 
 if __name__ == "__main__":
