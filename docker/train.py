@@ -83,8 +83,8 @@ def main(args):
     model.load_state_dict(state_dict)
 
     trainer.test(model, [data_module.test_dataloader()])
-    val_preds  = predict(trainer, model, data_module.val_dataloader()).cpu().detach().numpy()
-    test_preds = predict(trainer, model, data_module.test_dataloader()).cpu().detach().numpy()
+    val_preds  = predict(trainer, model, data_module.val_dataloader())
+    test_preds = predict(trainer, model, data_module.test_dataloader())
     print(val_preds)
     
 
