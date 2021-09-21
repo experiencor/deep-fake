@@ -81,5 +81,8 @@ def compute_num_crop_workers(each_worker=4):
 def predict(trainer, model, dataloader):
     logits = trainer.predict(model, dataloader)
     logits = torch.cat(logits)
-    return calc_prob(logits)
+    probs  = calc_prob(logits)
+    predictions = [{"filename": example, "prob": prob} \
+        for prob, example in zip(probs, dataloader.dataset)]
+    return predictions
     

@@ -83,13 +83,9 @@ def main(args):
     model.load_state_dict(state_dict)
 
     trainer.test(model, [data_module.test_dataloader()])
-    val_probs  = predict(trainer, model, data_module.val_dataloader()).cpu().detach().numpy()
-    test_probs = predict(trainer, model, data_module.test_dataloader()).cpu().detach().numpy()
-
-    #val_logits = pd.read_csv([{"filename": example, "prob": prob} \
-    #    for prob, example in zip(val_probs, data_module.val_dataloader())])
-    print(data_module.val_dataloader().dataset)
-    #val_logits.to_csv("val_logits.csv", index=False)
+    val_preds  = predict(trainer, model, data_module.val_dataloader()).cpu().detach().numpy()
+    test_preds = predict(trainer, model, data_module.test_dataloader()).cpu().detach().numpy()
+    print(val_preds)
     
 
 if __name__ == "__main__":
