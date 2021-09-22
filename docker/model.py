@@ -76,6 +76,8 @@ class Model(LightningModule):
             self.log_all({
                "val/loss": mean_loss
             })
+
+        return logits
     
     def validation_epoch_end(self, _):
         print(_)
