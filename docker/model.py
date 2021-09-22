@@ -71,7 +71,7 @@ class Model(LightningModule):
         mean_loss = torch.mean(self.all_gather(loss))
         val_auc.update(calc_prob(logits), batch["label"])
         
-        print("=" * 100)
+        print("=" * 100, self.global_step)
         if self.global_rank == 0:            
             self.log_all({
                "val/loss": mean_loss
