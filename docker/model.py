@@ -72,6 +72,7 @@ class Model(LightningModule):
         val_auc.update(calc_prob(logits), batch["label"])
         
         if self.global_rank == 0:
+            print(self.global_step)
             self.log_all({
                "val/loss": mean_loss
             })

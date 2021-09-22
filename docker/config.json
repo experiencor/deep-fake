@@ -6,7 +6,6 @@
     "device": "cuda",
     "train_batch_size": 84,
     "eval_batch_size": 4,
-    "image_size": 224,
     "weight_path": "/data/projects/deepfake/",
     "data_path": "/home/utopia/projects/deepfake/",
     "epoch": 32,
