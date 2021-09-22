@@ -62,12 +62,16 @@ def crop_faces(mtcnn, frames, frame_size, crop_batch_size=4):
     
 
 def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, frame_size):
-    mtcnn = MTCNN(
-        margin = 14,
-        factor = 0.6,
-        keep_all = True,
-        device = device if torch.cuda.is_available() else "cpu"
-    )
+    try:
+        mtcnn = MTCNN(
+            margin = 14,
+            factor = 0.6,
+            keep_all = True,
+            device = device if torch.cuda.is_available() else "cpu"
+        )
+    except Exception as e:
+        log(e)
+        return
     
     while True:
         file_path = queue.get()

@@ -71,7 +71,7 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
-def compute_num_crop_workers(each_worker=4):
+def compute_num_crop_workers(each_worker=6):
     nvmlInit()
     h = nvmlDeviceGetHandleByIndex(0)
     info = nvmlDeviceGetMemoryInfo(h)

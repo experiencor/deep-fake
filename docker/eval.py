@@ -51,6 +51,7 @@ def main(input_dir, output_file):
         if ".npy" in face:
             face_count += 1
     if face_count != len(test_videos):
+        log(f'Exit early as number of faces != number of videos')
         return
     
     # create the model and load the weights
