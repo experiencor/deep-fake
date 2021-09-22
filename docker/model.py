@@ -78,6 +78,7 @@ class Model(LightningModule):
             })
     
     def validation_epoch_end(self, _):
+        print(_)
         auc = val_auc.compute()
         val_auc.reset()
         
