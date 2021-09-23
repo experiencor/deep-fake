@@ -51,7 +51,7 @@ def main(args):
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
     missing_keys, unexpected_keys = model.load_state_dict(pretrain)
-    #log("missing_keys   :\t", missing_keys)
+    log("missing_keys   :\t", missing_keys)
     log("unexpected_keys:\t", unexpected_keys)
     
     # setup the trainer

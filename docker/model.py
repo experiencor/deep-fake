@@ -33,12 +33,10 @@ class Model(LightningModule):
         return self.model(x)
 
     def training_step(self, batch, _):
-        print(batch["video"].shape)
         opt = self.optimizers()        
         opt.zero_grad()
         
         lr = [group['lr'] for group in opt.param_groups][0]
-        print(batch["video"].shape)
         logits = self.model(batch["video"])
         loss = F.cross_entropy(logits, batch["label"])
         mean_loss = torch.mean(self.all_gather(loss))
@@ -74,7 +72,6 @@ class Model(LightningModule):
             })
     
     def validation_epoch_end(self, _):
-        print(_)
         auc = val_auc.compute()
         val_auc.reset()
         
