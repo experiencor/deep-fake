@@ -4,7 +4,7 @@ import torch.utils.data
 import torch
 import pandas as pd
 import time
-from utils import log, transform, compute_num_crop_workers, predict
+from utils import log, transform, compute_num_crop_workers, predict, train_aug
 from sklearn import metrics
 import pandas as pd
 from argparse import ArgumentParser
@@ -39,8 +39,8 @@ def main(input_dir, output_file):
         f"--workers {num_crop_workers} "
         f"--input {input_dir} "
         f"--output /data/faces "
-        #f"--save-image "
-        #f"--no-cache "
+        f"--save-image "
+        f"--no-cache "
     )
     avg_crop_time = (time.time() - tik) / len(test_videos)
     log(f'Face cropping completed! Average crop time: {avg_crop_time} for {len(test_videos)} videos.')
