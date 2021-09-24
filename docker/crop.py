@@ -2,17 +2,29 @@ import cv2
 import os
 import torch
 from retinaface.pre_trained_models import get_model
-from multiprocessing import Process, JoinableQueue
+import multiprocessing
+from multiprocessing import Process, JoinableQueue, Queue
 import traceback
 import json
+from torch.nn import functional as F
+import time
 import numpy as np
 from argparse import ArgumentParser
+from retinaface.box_utils import decode, decode_landm
 from utils import log, create_folder
+from torchvision.ops import nms
 import hashlib
+from retinaface.prior_box import priorbox
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
 fail_queue = JoinableQueue()
+detection_queue = JoinableQueue()
+nms_queue = JoinableQueue()
+m = multiprocessing.Manager()
+
+
+ROUNDING_DIGITS = 2
 
 
 def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
@@ -42,14 +54,21 @@ def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
     return frame[y:t, x:z, :], probs[face_idx]
 
 
-def crop_faces(face_detector, frames, frame_size, crop_batch_size=8):
+def crop_faces(frames, frame_size, crop_batch_size=4):
     all_boxes, all_probs = [], []
 
     for i in range(int(np.ceil(len(frames)/crop_batch_size))):
         batch = frames[i*crop_batch_size: (i+1)*crop_batch_size]
-        results = face_detector.predict_jsons_batch(batch)
-        boxes = [[box["bbox"]  for box in frame_result] for frame_result in results]
-        probs = [[box["score"] for box in frame_result] for frame_result in results]
+        results_queue = m.Queue()
+        detection_queue.put((batch, results_queue))
+
+        results = []
+        while len(results) < len(batch):
+            results += [results_queue.get()]
+        results.sort()
+
+        boxes = [[box["bbox"]  for box in frame_result] for _, frame_result in results]
+        probs = [[box["score"] for box in frame_result] for _, frame_result in results]
 
         all_boxes += list(boxes)
         all_probs += list(probs)
@@ -62,16 +81,110 @@ def crop_faces(face_detector, frames, frame_size, crop_batch_size=8):
         return_probs += [prob]
     
     return return_faces, return_probs
+
+
+def detect_faces(device):
+    face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=device)
+    face_detector.eval()
+
+    while True:
+        print(f"detection_queue size: {detection_queue.qsize()}")
+        frames, results_queue = detection_queue.get()
+        print(f"frames: {len(frames)}")
+        (bboxs, confs, lands), transformed_shape = face_detector.predict(frames)
+        bboxs = bboxs.cpu().detach().to(torch.float32)
+        confs = confs.cpu().detach().to(torch.float32)
+        lands = lands.cpu().detach().to(torch.float32)
+
+        for frame_id, (frame, loc, conf, land) in enumerate(zip(frames, bboxs, confs, lands)):
+            nms_queue.put((frame_id, frame, loc, conf, land, transformed_shape, face_detector.variance, results_queue))
+
+
+def perform_nms(confidence_threshold: float = 0.7, nms_threshold: float = 0.4):
+    while True:
+        frame_id, frame, loc, conf, land, transformed_shape, variance, results_queue = nms_queue.get()
+
+        original_height, original_width = frame.shape[:2]
+        transformed_height, transformed_width = transformed_shape
+        transformed_size = (transformed_width, transformed_height)
+
+        scale_landmarks = torch.from_numpy(np.tile(transformed_size, 5))
+        scale_bboxes = torch.from_numpy(np.tile(transformed_size, 2))
+
+        prior_box = priorbox(
+            min_sizes=[[16, 32], [64, 128], [256, 512]],
+            steps=[8, 16, 32],
+            clip=False,
+            image_size=transformed_shape,
+        )
+
+        conf = F.softmax(conf, dim=-1)
+
+        annotations: List[Dict[str, Union[List, float]]] = []
+
+        boxes = decode(loc.data, prior_box, variance)
+
+        boxes *= scale_bboxes
+        scores = conf[:, 1]
+
+        landmarks = decode_landm(land.data, prior_box, variance)
+        landmarks *= scale_landmarks
+
+        # ignore low scores
+        valid_index = torch.where(scores > confidence_threshold)[0]
+        boxes = boxes[valid_index]
+        landmarks = landmarks[valid_index]
+        scores = scores[valid_index]
+
+        # do NMS
+        keep = nms(boxes, scores, nms_threshold)
+        boxes = boxes[keep, :]
+
+        if boxes.shape[0] == 0:
+            results_queue.put((frame_id, [{"bbox": [], "score": -1, "landmarks": []}]))
+            continue
+
+        landmarks = landmarks[keep]
+
+        scores = scores[keep].cpu().numpy().astype(float)
+
+        boxes_np = boxes.cpu().numpy()
+
+        landmarks_np = landmarks.cpu().numpy()
+        resize_coeff = original_height / transformed_height
+
+        boxes_np *= resize_coeff
+        landmarks_np = landmarks_np.reshape(-1, 10) * resize_coeff
+
+        for box_id, bbox in enumerate(boxes_np):
+            x_min, y_min, x_max, y_max = bbox
+
+            x_min = np.clip(x_min, 0, original_width - 1)
+            x_max = np.clip(x_max, x_min + 1, original_width - 1)
+
+            if x_min >= x_max:
+                continue
+
+            y_min = np.clip(y_min, 0, original_height - 1)
+            y_max = np.clip(y_max, y_min + 1, original_height - 1)
+
+            if y_min >= y_max:
+                continue
+
+            annotations += [
+                {
+                    "bbox": np.round(bbox.astype(float), ROUNDING_DIGITS).tolist(),
+                    "score": np.round(scores, ROUNDING_DIGITS)[box_id],
+                    "landmarks": np.round(landmarks_np[box_id].astype(float), ROUNDING_DIGITS)
+                    .reshape(-1, 2)
+                    .tolist(),
+                }
+            ]
+
+        results_queue.put((frame_id, annotations))        
     
 
-def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, frame_size):
-    try:
-        face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=device)
-        face_detector.eval()
-    except Exception as e:
-        log(e)
-        return
-    
+def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, frame_size):   
     while True:
         file_path = queue.get()
         
@@ -113,7 +226,7 @@ def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, fr
                         _ = video.grab()
                         i += 1
 
-                    faces, probs = crop_faces(face_detector, frames, frame_size)
+                    faces, probs = crop_faces(frames, frame_size)
                     for index, face, prob in zip(chosen_indices, faces, probs):
                         if prob > 0:
                             selected_indices += [[index, face, prob]]
@@ -171,9 +284,9 @@ def main(args):
         if f.endswith(".mp4"):
             queue.put(f"{args.input}/{f}")
 
-    workers = []
-    for _ in range(args.workers):
-        process = Process(target=worker, args=(
+    video_workers = []
+    for _ in range(8):
+        video_worker = Process(target=worker, args=(
             args.output, 
             args.save_image, 
             args.no_cache,
@@ -182,15 +295,31 @@ def main(args):
             config['frame_number'],
             config['frame_size']
         ))
-        process.start()
-        workers.append(process)
+        video_worker.daemon = True
+        video_worker.start()
+        video_workers.append(video_worker)
+
+    face_detection_worker = Process(target=detect_faces, args=(config['device'],))
+    face_detection_worker.daemon = True
+    face_detection_worker.start()
+
+    npm_workers = []
+    for _ in range(16):
+        nms_worker = Process(target=perform_nms)
+        nms_worker.daemon = True
+        nms_worker.start()
+        npm_workers += [nms_worker]
+
     queue.join()
 
-    for _ in range(args.workers):
-        queue.put(None)
+    #for video_worker in video_workers:
+    #    video_worker.stop()
+    #for nms_worker in npm_workers:
+    #    nms_worker.stop()
+    #face_detection_worker.stop()
 
-    for w in workers:
-        w.join()
+    #for w in workers:
+    #    w.join()
         
 
 if __name__ == "__main__":
