@@ -5,6 +5,7 @@ from retinaface.pre_trained_models import get_model
 from multiprocessing import Process, JoinableQueue
 import traceback
 import json
+import time
 import numpy as np
 from argparse import ArgumentParser
 from utils import log, create_folder
@@ -164,6 +165,7 @@ def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, fr
         
 
 def main(args):
+    tik = time.time()
     config = json.load(open("config.json"))
     create_folder(args.output)
 
@@ -191,6 +193,7 @@ def main(args):
 
     for w in workers:
         w.join()
+    log(f'crop time: {time.time() - tik}')
         
 
 if __name__ == "__main__":
