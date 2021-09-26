@@ -41,7 +41,7 @@ ALPHA               = 4
 ROOT_PATH           = "."
 
 
-nvmlInit()
+nvmlInit()  
 h = nvmlDeviceGetHandleByIndex(0)
 info = nvmlDeviceGetMemoryInfo(h)
 multiplier = int(np.ceil((info.free/1e9) / 5))

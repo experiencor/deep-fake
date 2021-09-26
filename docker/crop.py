@@ -90,7 +90,7 @@ def worker(i, output_dir, save_image):
                 if total_count <= frame_count:
                     chosen_indices = np.random.choice(range(frame_count), total_count, replace=False)
                 else:
-                    chosen_indices = np.range(frame_count)
+                    chosen_indices = np.arange(frame_count)
                 chosen_indices = sorted(chosen_indices)
 
                 frames = []
