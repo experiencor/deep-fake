@@ -1,6 +1,6 @@
 {
     "frame_number": 4,
-    "frame_size": 224,
+    "frame_size": 256,
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
@@ -9,5 +9,5 @@
     "weight_path": "/data/projects/deepfake/",
     "data_path": "/home/utopia/projects/deepfake/",
     "epoch": 32,
-    "num_eval_iters": 4
+    "num_eval_iters": 8
 }

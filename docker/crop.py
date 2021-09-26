@@ -89,7 +89,7 @@ def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, fr
         np.random.seed(seed)        
 
         try:
-            if not os.path.exists(f"{output_dir}/0/{file_name}.npy") or no_cache:
+            if no_cache or not (os.path.exists(f"{output_dir}/{num_iters-1}/{file_name}.npy") or os.path.exists(f"{output_dir}/{num_iters-1}/{file_name}.npz")):
                 video = cv2.VideoCapture(file_path)
                 frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
                 total_count = num_iters * frame_number
@@ -141,12 +141,12 @@ def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, fr
 
                     iter_faces = np.array([detect_faces[i] for i in select_indices])
                     iter_probs = np.array([detect_probs[i] for i in select_indices])
-                    np.save(f"{iter_path}/{file_name}.npy", iter_faces)
+                    np.savez_compressed(f"{iter_path}/{file_name}", faces=iter_faces)
 
                     if save_image:
+                        image_path = f"{iter_path}/{file_name}"
+                        create_folder(image_path)
                         for i, (face, prob) in enumerate(zip(iter_faces, iter_probs)):
-                            image_path = f"{iter_path}/{file_name}"
-                            create_folder(image_path)
                             cv2.imwrite(f"{image_path}/{i}_{prob}.png", face)
 
                     l_idx += increment
