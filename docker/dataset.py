@@ -48,7 +48,12 @@ class Dataset(torch.utils.data.Dataset):
 
         print("asdfasdfasdf", self._frame_number - len(frames))
         pads   = [torch.zeros((self._frame_size, self._frame_size, 3)) for _ in range(self._frame_number - len(frames))]
-        frames = torch.tensor(np.stack(frames + pads))
+        try:
+            frames = torch.tensor(np.stack(frames + pads))
+        except Exception as e:
+            print(e)
+            print(pads)
+            raise("asdfasdfsdf")
         frames = frames.permute(3, 0, 1, 2)
 
         sample_dict = {
