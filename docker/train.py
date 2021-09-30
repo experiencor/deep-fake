@@ -40,14 +40,14 @@ def main(args):
         config['num_eval_iters'],
     )        
 
-    for _ in data_module.train_dataloader():
-        pass
+    for i, _ in enumerate(data_module.train_dataloader()):
+        print(i)
 
-    for _ in data_module.val_dataloader():
-        pass
+    for i, _ in enumerate(data_module.val_dataloader()):
+        print(i)
 
-    for _ in data_module.test_dataloader():
-        pass
+    for i, _ in enumerate(data_module.test_dataloader()):
+        print(i)
 
     # create the model
     total_steps = config["epoch"] * int(np.ceil(data_module.get_trainset_size() / config["train_batch_size"]))
