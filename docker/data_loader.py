@@ -42,7 +42,6 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             transform=transform,
             frame_size=frame_size
         )
-        
 
     def train_dataloader(self):
         self._epoch = self.epoch % self.num_eval_iters
