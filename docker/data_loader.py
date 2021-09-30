@@ -33,6 +33,7 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             epoch=self.epoch,
             frame_number=frame_number,
             transform=transform,
+            augmentation=train_aug,
             frame_size=frame_size
         )
         self.test_dataset = Dataset(
