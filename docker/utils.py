@@ -123,14 +123,14 @@ train_aug = A.Compose([
     ),
     A.Lambda(overlay_text),
     A.Lambda(overlay_emoji),
-    A.RandomSizedCrop(
-        [image_size*3//4, image_size], 
-        image_size, 
-        image_size, 
-        w2h_ratio=1.0, 
-        interpolation=1, 
-        p=0.2
-    ),
+    # A.RandomSizedCrop(
+    #     [image_size*3//4, image_size], 
+    #     image_size, 
+    #     image_size, 
+    #     w2h_ratio=1.0, 
+    #     interpolation=1, 
+    #     p=0.2
+    # ),
 ])
 
 transform = Compose(
