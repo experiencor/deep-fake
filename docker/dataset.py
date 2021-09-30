@@ -46,6 +46,7 @@ class Dataset(torch.utils.data.Dataset):
             frames = []
             log(e)
 
+        print("asdfasdfasdf", self._frame_number - len(frames))
         pads   = [torch.zeros((self._frame_size, self._frame_size, 3)) for _ in range(self._frame_number - len(frames))]
         frames = torch.tensor(np.stack(frames + pads))
         frames = frames.permute(3, 0, 1, 2)
