@@ -9,47 +9,44 @@ from dataset import Dataset
 
 
 class DataLoader(pytorch_lightning.LightningDataModule):
-    def __init__(self, data_version, root_path, frame_number, frame_size, batch_size):
+    def __init__(self, data_version, root_path, frame_number, frame_size, batch_size, num_eval_iters):
         super().__init__()
-        self.video_path = f"{root_path}/data/{data_version}"
+        self.data = pd.read_csv(f"{root_path}/data/{data_version}.csv")
+        self.train_data = self.data[self.data.split == "train"].copy()
+        dev_data        = self.data[self.data.split == "dev"].copy()
+        test_data       = self.data[self.data.split == "test"].copy()
 
-        splits = pd.read_csv("splits.csv")
-        all_files = set(os.listdir(f"{self.video_path}/0"))
-        splits = splits[splits.filename.isin(all_files)].copy()
+        self.epoch = 0
+        self.batch_size = batch_size
+        self.num_eval_iters = num_eval_iters
 
-        self.train_data = splits[splits.split == "train"].copy()
-        dev_data = splits[splits.split == "dev"].copy()
-        test_data = splits[splits.split == "test"].copy()
-        
         self.train_dataset = Dataset(
             data_frame=self.train_data,
-            video_path_prefix=f"{self.video_path}/0",
+            epoch=self.epoch,
             frame_number=frame_number,
             transform=transform,
             augmentation=train_aug,
+            frame_size=frame_size
         )
         self.val_dataset = Dataset(
             data_frame=dev_data,
-            video_path_prefix=f"{self.video_path}/0",
+            epoch=self.epoch,
             frame_number=frame_number,
-            transform=transform
+            transform=transform,
+            frame_size=frame_size
         )
         self.test_dataset = Dataset(
             data_frame=test_data,
-            video_path_prefix=f"{self.video_path}/0",
+            epoch=self.epoch,
             frame_number=frame_number,
-            transform=transform
+            transform=transform,
+            frame_size=frame_size
         )
-
-        self.num_sets = len(os.listdir(self.video_path))
-        self.epoch = 0
-        self.batch_size = batch_size
+        
 
     def train_dataloader(self):
-        set_idx = self.epoch % self.num_sets
-        self.train_dataset._video_path_prefix = f"{self.video_path}/{set_idx}"
+        self._epoch = self.epoch % self.num_eval_iters
         self.epoch += 1
-        
         return torch.utils.data.DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,

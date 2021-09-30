@@ -4,10 +4,9 @@
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
-    "train_batch_size": 48,
+    "train_batch_size": 40,
     "eval_batch_size": 4,
-    "weight_path": "/data/projects/deepfake/",
-    "data_path": "/home/utopia/projects/deepfake/",
+    "root_path": "/data/projects/deepfake/",
     "epoch": 32,
     "num_eval_iters": 8
 }
