@@ -36,13 +36,15 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             raw_frames = np.load(f"{prefix}/{self._epoch}/{filename}.npz")["faces"]
+            for _, frame in enumerate(raw_frames):
+                print(frame.shape)
             if self._augmentation is None:
                 frames = raw_frames
             else:
                 frames = [self._augmentation(image = raw_frame)["image"] for raw_frame in raw_frames]
-                for _, frame in enumerate(frames):
-                    print(frame.shape)
-                    cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
+                #for _, frame in enumerate(frames):
+                #    print(frame.shape)
+                #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
         except Exception as e:
             frames = []
             log(e)
