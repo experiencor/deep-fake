@@ -74,7 +74,7 @@ def overlay_emoji(image, p=0.5, **kwargs):
             x_pos=x,
             y_pos=y
         )
-        image = np.array(image)[:,:,::-1]
+        image = np.array(image)[:,:,:3][:,:,::-1]
     return image
 
 def gaussian_noise_color(img, param=0.005, p=0.5, **kwargs):
