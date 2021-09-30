@@ -40,8 +40,8 @@ def main(args):
         config['num_eval_iters'],
     )        
 
-    for i, _ in enumerate(data_module.train_dataloader()):
-        print(i)
+    #for i, _ in enumerate(data_module.train_dataloader()):
+    #    print(i)
 
     for i, _ in enumerate(data_module.val_dataloader()):
         print(i)
