@@ -121,7 +121,7 @@ train_aug = A.Compose([
         fill_value=0, 
         p=0.5
     ),
-    #A.Lambda(overlay_text),
+    A.Lambda(overlay_text),
     #A.Lambda(overlay_emoji),
     # A.RandomSizedCrop(
     #     [image_size*3//4, image_size], 
