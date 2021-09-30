@@ -45,7 +45,7 @@ class DataLoader(pytorch_lightning.LightningDataModule):
         )
 
     def train_dataloader(self):
-        self._epoch = self.epoch % self.num_eval_iters
+        self.train_dataset._epoch = self.epoch % self.num_eval_iters
         self.epoch += 1
         return torch.utils.data.DataLoader(
             self.train_dataset,
