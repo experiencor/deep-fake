@@ -37,7 +37,7 @@ class Dataset(torch.utils.data.Dataset):
         try:
             raw_frames = np.load(f"{prefix}/{self._epoch}/{filename}.npz")["faces"]
             if self._augmentation is None:
-                frames = raw_frames
+                frames = list(raw_frames)
             else:
                 frames = [self._augmentation(image = raw_frame)["image"] for raw_frame in raw_frames]
                 for _, frame in enumerate(frames):
