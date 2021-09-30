@@ -20,7 +20,13 @@ test_auc    = torchmetrics.AUROC(pos_label=1)
 class Model(LightningModule):
     def __init__(self, total_steps, lr):
         super().__init__()
-        self.model = EfficientNet3D.from_name("efficientnet-b7", override_params={'num_classes': 2})
+        self.model = pytorchvideo.models.resnet.create_resnet(
+            input_channel=3, # RGB input from Kinetics
+            model_depth=50, # For the tutorial let's just use a 50 layer network
+            model_num_class=2, # Kinetics has 400 classes so we need out final head to align
+            norm=nn.BatchNorm3d,
+            activation=nn.ReLU,
+        )
         self.best_auc = 0
         self.total_steps = total_steps
         self.lr = lr
