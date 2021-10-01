@@ -40,8 +40,8 @@ class Dataset(torch.utils.data.Dataset):
                 frames = list(raw_frames)
             else:
                 frames = [self._augmentation(image = raw_frame)["image"] for raw_frame in raw_frames]
-                for _, frame in enumerate(frames):
-                    cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
+                #for _, frame in enumerate(frames):
+                #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
         except Exception as e:
             frames = []
             log(e)
