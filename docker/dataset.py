@@ -43,10 +43,10 @@ class Dataset(torch.utils.data.Dataset):
         try:
             metadata = np.load(f"{prefix}/{filename}_{self._epoch}.npz", allow_pickle=True)
             faces = metadata["faces"]
-            faces = [cv2.resize(face, (self._frame_size, self._frame_size)) for face in faces]
+            faces = np.array([cv2.resize(face, (self._frame_size, self._frame_size)) for face in faces])
             indices = list(range(len(faces)))
             np.random.shuffle(indices)
-            faces = [faces[i] for i in sorted(indices[:self._frame_num])]
+            faces = faces[sorted(indices),:,:,:]
 
             mel = metadata["mel"]
             mel = cv2.resize(mel, (self._freq_num, self._audio_len))
