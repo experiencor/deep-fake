@@ -60,7 +60,7 @@ class Dataset(torch.utils.data.Dataset):
         print(faces.shape, mel.shape)
 
         sample_dict = {
-            "video": faces,
+            "video": torch.tensor(faces),
             "audio": mel,
             "label": label,
             "video_index": video_index,
