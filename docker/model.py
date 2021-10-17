@@ -1,12 +1,9 @@
-import pytorchvideo.data
 import torch.utils.data
 import torch.nn.functional as F
-import pytorchvideo.models.resnet
 import torch
 import torch.nn as nn
 import torchmetrics
 import albumentations as A
-from efficientnet_pytorch_3d import EfficientNet3D
 from utils import calc_prob
 from pytorch_lightning.core.lightning import LightningModule
 import wandb
