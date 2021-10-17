@@ -9,7 +9,17 @@ from dataset import Dataset
 
 
 class DataLoader(pytorch_lightning.LightningDataModule):
-    def __init__(self, data_version, root_path, frame_number, frame_size, batch_size, num_eval_iters):
+    def __init__(self, 
+        data_version, 
+        root_path, 
+        frame_number, 
+        frame_size, 
+        batch_size, 
+        frame_num,
+        freq_num, 
+        audio_len, 
+        num_eval_iters
+    ):
         super().__init__()
         self.data = pd.read_csv(f"{root_path}/data/{data_version}.csv")
         self.train_data = self.data[self.data.split == "train"].copy()
@@ -26,7 +36,10 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             frame_number=frame_number,
             transform=transform,
             augmentation=train_aug,
-            frame_size=frame_size
+            frame_size=frame_size,
+            frame_num=frame_num,
+            freq_num=freq_num,
+            audio_len=audio_len,
         )
         self.val_dataset = Dataset(
             data_frame=dev_data,
@@ -34,14 +47,20 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             frame_number=frame_number,
             transform=transform,
             augmentation=train_aug,
-            frame_size=frame_size
+            frame_size=frame_size,
+            frame_num=frame_num,
+            freq_num=freq_num,
+            audio_len=audio_len,
         )
         self.test_dataset = Dataset(
             data_frame=test_data,
             epoch=self.epoch,
             frame_number=frame_number,
             transform=transform,
-            frame_size=frame_size
+            frame_size=frame_size,
+            frame_num=frame_num,
+            freq_num=freq_num,
+            audio_len=audio_len,
         )
 
     def train_dataloader(self):

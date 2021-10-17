@@ -47,10 +47,18 @@ def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
     t = center_y + size
     x = max(0, center_x - size)
     z = center_x + size
+
+    noise = int(0.05 * size)
+    y += np.random.randint(-noise, noise+1)
+    t += np.random.randint(-noise, noise+1)
+    x += np.random.randint(-noise, noise+1)
+    z += np.random.randint(-noise, noise+1)
+    y = max(0, y)
+    x = max(0, x)
     return frame[y:t, x:z, :], probs[face_idx]
 
 
-def crop_faces(face_detector, frames, frame_size, crop_batch_size=8, skip_num=4):
+def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=8):
     all_boxes, all_probs = [], []
 
     indices = range(0, len(frames), skip_num)
@@ -78,7 +86,6 @@ def crop_faces(face_detector, frames, frame_size, crop_batch_size=8, skip_num=4)
             distance += 1
 
         face, prob = apply_crop(frame, boxes, probs)
-        face = cv2.resize(face, (frame_size, frame_size))
         return_faces += [face]
         return_probs += [prob]
     return return_faces, return_probs
@@ -124,7 +131,6 @@ def worker(
     save_image, 
     num_iters, 
     device, 
-    frame_size, 
     max_clip_len,
     resample_rate,
     freq_num,
@@ -199,7 +205,7 @@ def worker(
                         mel_spectrogram,
                         mfcc_transform
                     )
-                    faces, probs = crop_faces(face_detector, video, frame_size, skip_num)
+                    faces, probs = crop_faces(face_detector, video, skip_num)
 
                     faces = [face for (face, prob) in zip(faces, probs) if prob > 0]
                     probs = [prob for prob in probs if prob > 0]
@@ -248,7 +254,6 @@ def main(args):
             args.save_image, 
             config['num_sample_per_video'],
             config['device'],
-            config['frame_size'],
             config['max_clip_len'],
             config['resample_rate'],
             config['freg_number'],

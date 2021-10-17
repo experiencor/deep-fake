@@ -114,10 +114,13 @@ train_aug = A.Compose([
         border_mode=cv2.BORDER_CONSTANT, 
         p=0.5
     ),
-    A.Cutout(
-        num_holes=6, 
-        max_h_size=24, 
-        max_w_size=24, 
+    A.CoarseDropout(
+        min_holes=5,
+        max_holes=8, 
+        min_height=16,
+        max_height=24, 
+        min_width=16,
+        max_width=24, 
         fill_value=0, 
         p=0.5
     ),
