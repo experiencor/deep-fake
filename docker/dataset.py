@@ -41,7 +41,7 @@ class Dataset(torch.utils.data.Dataset):
         label = int(data_row["label"])
         
         try:
-            metadata = np.load(f"{prefix}/{filename}_{self._epoch}.npz")["faces"]
+            metadata = np.load(f"{prefix}/{filename}_{self._epoch}.npz", allow_pickle=True)
             faces = metadata["faces"]
             faces = [cv2.resize(face, (self._frame_size, self._frame_size)) for face in faces]
             indices = list(range(len(faces)))
