@@ -4,7 +4,7 @@
     "frame_size": 224,
     "skip_number": 8,
     "freg_number": 80,
-    "audio_len": 120,
+    "audio_len": 128,
     "resample_rate": 32700,
     "audio_size": 128,
     "max_clip_len": 4,

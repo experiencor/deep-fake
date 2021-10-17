@@ -53,9 +53,9 @@ class Dataset(torch.utils.data.Dataset):
             mel = cv2.resize(mel, (self._audio_len, self._freq_num))
             if self._augmentation is not None:
                 faces = np.array([self._augmentation(image = face)["image"] for face in faces])
-                #for _, frame in enumerate(frames):
-                #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
-            plt.imsave(f"/data/temp/mel.png", mel)
+                #for _, face in enumerate(faces):
+                #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", face)
+            #plt.imsave(f"/data/temp/mel.png", mel)
         except Exception as e:
             log(e)
 
