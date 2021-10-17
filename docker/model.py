@@ -35,7 +35,7 @@ class Model(LightningModule):
         opt.zero_grad()
         
         lr = [group['lr'] for group in opt.param_groups][0]
-        audio = batch["audio"]
+        audio = torch.unsqueeze(torch.unsqueeze(batch["audio"], 1), 3)
         print(audio.shape, batch["video"][0].shape, batch["video"][1].shape)
         logits = self.model(batch["video"] + [audio])
         print(logits)
