@@ -10,6 +10,7 @@ from efficientnet_pytorch_3d import EfficientNet3D
 from utils import calc_prob
 from pytorch_lightning.core.lightning import LightningModule
 import wandb
+from pytorchvideo.models.audio_visual_slowfast import create_audio_visual_slowfast
 
 
 train_auc   = torchmetrics.AUROC(pos_label=1)
@@ -20,13 +21,7 @@ test_auc    = torchmetrics.AUROC(pos_label=1)
 class Model(LightningModule):
     def __init__(self, total_steps, lr):
         super().__init__()
-        self.model = pytorchvideo.models.resnet.create_resnet(
-            input_channel=3, # RGB input from Kinetics
-            model_depth=50, # For the tutorial let's just use a 50 layer network
-            model_num_class=2, # Kinetics has 400 classes so we need out final head to align
-            norm=nn.BatchNorm3d,
-            activation=nn.ReLU,
-        )
+        self.model = create_audio_visual_slowfast(model_num_class=2)
         self.best_auc = 0
         self.total_steps = total_steps
         self.lr = lr
