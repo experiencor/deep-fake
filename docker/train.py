@@ -40,7 +40,7 @@ def main(args):
         config["frame_number"],
         config["freg_number"], 
         config["audio_len"],
-        config['num_eval_iters'],
+        config['num_sample_per_video'],
     )        
 
     # create the model

@@ -12,13 +12,13 @@ import torch.nn.functional as F
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
     Normalize,
+    UniformTemporalSubsample,
 )
 from torchvision.transforms import (
     Compose,
     Lambda,
 )
 import cv2
-import matplotlib.pylab as plt
 import math
 import PIL
 import albumentations as A
@@ -136,16 +136,34 @@ train_aug = A.Compose([
     ),
 ])
 
+class PackPathway(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, frames: torch.Tensor):
+        fast_pathway = frames
+        slow_pathway = torch.index_select(
+            frames,
+            1,
+            torch.linspace(
+                0, frames.shape[1] - 1, frames.shape[1] // 4
+            ).long(),
+        )
+        frame_list = [slow_pathway, fast_pathway]
+        return frame_list
+
 transform = Compose(
     [
-    ApplyTransformToKey(
-        key="video",
-        transform=Compose(
-            [
-            Lambda(lambda x: x / 1.0),
-            Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-            ]
-        ),
+        ApplyTransformToKey(
+            key="video",
+            transform=Compose(
+                [
+                    UniformTemporalSubsample(config["frame_number"]),
+                    Lambda(lambda x: x / 1.0),
+                    Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                    PackPathway()
+                ]
+            ),
         ),
     ]
 )
