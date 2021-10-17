@@ -59,6 +59,8 @@ class Dataset(torch.utils.data.Dataset):
         except Exception as e:
             log(e)
 
+        print("torch.tensor(mel)", torch.tensor(mel).shape)
+
         sample_dict = {
             "video": torch.permute(torch.tensor(faces), (3, 0, 1, 2)),
             "audio": torch.tensor(mel).transpose(),
