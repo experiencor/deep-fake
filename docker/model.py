@@ -35,9 +35,11 @@ class Model(LightningModule):
         opt.zero_grad()
         
         lr = [group['lr'] for group in opt.param_groups][0]
+        fast = batch["video"][0]
+        slow = batch["video"][1]
         audio = torch.unsqueeze(torch.unsqueeze(batch["audio"], 1), 3)
-        print(audio.shape, batch["video"][0].shape, batch["video"][1].shape)
-        logits = self.model(batch["video"] + [audio])
+        print(fast.shape, slow.shape, audio.shape)
+        logits = self.model([fast, slow, audio])
         print(logits)
         loss = F.cross_entropy(logits, batch["label"])
         mean_loss = torch.mean(self.all_gather(loss))
