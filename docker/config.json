@@ -1,6 +1,6 @@
 {
     "num_sample_per_video": 8,
-    "frame_number": 64,
+    "frame_number": 32,
     "frame_size": 224,
     "skip_number": 8,
     "freg_number": 80,
