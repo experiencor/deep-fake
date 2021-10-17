@@ -61,7 +61,7 @@ class Dataset(torch.utils.data.Dataset):
 
         sample_dict = {
             "video": torch.permute(torch.tensor(faces), (3, 0, 1, 2)),
-            "audio": torch.permute(torch.tensor(mel), (2, 0, 1)),
+            "audio": torch.tensor(mel),
             "label": label,
             "video_index": video_index,
             "filename": filename
