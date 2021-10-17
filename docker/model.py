@@ -35,6 +35,7 @@ class Model(LightningModule):
         opt.zero_grad()
         
         lr = [group['lr'] for group in opt.param_groups][0]
+        print(batch["audio"].shape, batch["video"][0].shape, batch["video"][1].shape)
         logits = self.model(batch["video"] + [batch["audio"]])
         print(logits)
         loss = F.cross_entropy(logits, batch["label"])
