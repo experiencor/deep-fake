@@ -35,7 +35,7 @@ class Model(LightningModule):
         opt.zero_grad()
         
         lr = [group['lr'] for group in opt.param_groups][0]
-        logits = self.model(batch["video"])
+        logits = self.model(batch["video"] + [batch["audio"]])
         loss = F.cross_entropy(logits, batch["label"])
         mean_loss = torch.mean(self.all_gather(loss))
         train_auc.update(calc_prob(logits), batch["label"])

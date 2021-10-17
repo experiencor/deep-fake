@@ -66,6 +66,4 @@ class Dataset(torch.utils.data.Dataset):
         }
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)
-        
-        print("video", sample_dict["video"][0].shape, sample_dict["video"][1].shape)
         return sample_dict
