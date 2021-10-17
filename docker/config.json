@@ -11,8 +11,8 @@
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
-    "train_batch_size": 48,
-    "eval_batch_size": 4,
+    "train_batch_size": 1,
+    "eval_batch_size": 1,
     "root_path": "/data/projects/deepfake/",
     "epoch": 32
 }
