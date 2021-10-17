@@ -18,7 +18,10 @@ test_auc    = torchmetrics.AUROC(pos_label=1)
 class Model(LightningModule):
     def __init__(self, total_steps, lr):
         super().__init__()
-        self.model = create_audio_visual_slowfast(model_num_class=2)
+        self.model = create_audio_visual_slowfast(
+            model_num_class=2,
+            model_depth=18
+        )
         self.best_auc = 0
         self.total_steps = total_steps
         self.lr = lr
