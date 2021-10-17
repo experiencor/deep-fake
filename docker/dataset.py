@@ -57,8 +57,9 @@ class Dataset(torch.utils.data.Dataset):
                 #for _, frame in enumerate(frames):
                 #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
         except Exception as e:
-            frames = []
             log(e)
+
+        print(faces.shape, mel.shape)
 
         sample_dict = {
             "video": faces,
