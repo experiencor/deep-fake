@@ -1,12 +1,17 @@
 {
-    "frame_number": 4,
-    "frame_size": 256,
+    "num_sample_per_video": 8,
+    "frame_number": 64,
+    "frame_size": 224,
+    "skip_number": 8,
+    "freg_number": 80,
+    "resample_rate": 32700,
+    "audio_size": 128,
+    "max_clip_len": 4,
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
-    "train_batch_size": 80,
+    "train_batch_size": 48,
     "eval_batch_size": 4,
     "root_path": "/data/projects/deepfake/",
-    "epoch": 32,
-    "num_eval_iters": 8
+    "epoch": 32
 }
