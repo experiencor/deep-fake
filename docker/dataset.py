@@ -6,6 +6,7 @@ import torch
 from utils import log
 import cv2
 import torch.utils.data
+import matplotlib.pylab as plt
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -54,6 +55,7 @@ class Dataset(torch.utils.data.Dataset):
                 faces = np.array([self._augmentation(image = face)["image"] for face in faces])
                 #for _, frame in enumerate(frames):
                 #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", frame)
+            plt.imsave(f"/data/temp/mel.png", mel)
         except Exception as e:
             log(e)
 
