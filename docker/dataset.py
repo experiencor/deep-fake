@@ -57,8 +57,6 @@ class Dataset(torch.utils.data.Dataset):
         except Exception as e:
             log(e)
 
-        print(faces.shape, mel.shape)
-
         sample_dict = {
             "video": torch.permute(torch.tensor(faces), (3, 0, 1, 2)),
             "audio": mel,
@@ -68,4 +66,6 @@ class Dataset(torch.utils.data.Dataset):
         }
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)
+        
+        print("video", sample_dict["video"].shape)
         return sample_dict
