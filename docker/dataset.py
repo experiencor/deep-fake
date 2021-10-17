@@ -49,7 +49,7 @@ class Dataset(torch.utils.data.Dataset):
             faces = faces[sorted(indices),:,:,:]
 
             mel = metadata["mel"]
-            mel = cv2.resize(mel, (self._freq_num, self._audio_len))
+            mel = cv2.resize(mel, (self._audio_len, self._freq_num))
             if self._augmentation is not None:
                 faces = np.array([self._augmentation(image = face)["image"] for face in faces])
                 #for _, frame in enumerate(frames):
