@@ -6,6 +6,7 @@ import traceback
 import json
 import time
 import numpy as np
+import torchaudio.transforms as T  
 from argparse import ArgumentParser
 from utils import log, create_folder
 import librosa
@@ -14,7 +15,6 @@ from moviepy.editor import AudioFileClip, VideoFileClip
 import torch        
 import torchaudio.transforms as T        
 from retinaface.predict_single import Model
-from utils import spectrogram, mel_spectrogram, mfcc_transform
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
@@ -89,7 +89,18 @@ def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6):
     return return_boxes, return_probs
 
 
-def save(file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate, save_image):
+def save(
+    file_path, 
+    ouput_path, 
+    start, 
+    end, 
+    all_boxes, 
+    all_probs, 
+    resample_rate,
+    spectrogram,
+    mel_spectrogram,
+    mfcc_transform,    
+):
     audioclip = AudioFileClip(file_path).subclip(start, end)
     videoclip = VideoFileClip(file_path).subclip(start, end)
 
@@ -113,17 +124,44 @@ def save(file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate,
 
     faces = [face for (face, prob) in zip(all_the_faces, all_the_probs) if prob > 0]
     probs = [prob for prob in all_the_probs if prob > 0]
+    
+    create_folder(ouput_path)
+    for i, (face, prob) in enumerate(zip(faces, probs)):
+        cv2.imwrite(f"{ouput_path}/{i}_{prob}.png", face)
+    plt.imsave(f"{ouput_path}/spec.png", spec)
+    plt.imsave(f"{ouput_path}/mel.png", mel)
+    plt.imsave(f"{ouput_path}/mfcc.png", mfcc)
 
-    if save_image:
-        create_folder(ouput_path)
-        for i, (face, prob) in enumerate(zip(faces, probs)):
-            cv2.imwrite(f"{ouput_path}/{i}_{prob}.png", face)
-        plt.imsave(f"{ouput_path}/spec.png", spec)
-        plt.imsave(f"{ouput_path}/mel.png", mel)
-        plt.imsave(f"{ouput_path}/mfcc.png", mfcc)
 
+def extract_video_audio(freq_num, resample_rate):
+    spectrogram = T.Spectrogram(
+        n_fft=2*freq_num-1,
+        hop_length=1024,
+        center=True,
+        pad_mode="reflect",
+        power=2.0,
+    )
+    mel_spectrogram = T.MelSpectrogram(
+        sample_rate=resample_rate,
+        n_fft=2048,
+        center=True,
+        pad_mode="reflect",
+        power=2.0,
+        norm='slaney',
+        onesided=True,
+        n_mels=freq_num,
+        mel_scale="htk",
+    )
+    mfcc_transform = T.MFCC(
+        sample_rate=resample_rate,
+        n_mfcc=freq_num,
+        melkwargs={
+        'n_fft': 2048,
+        'n_mels': freq_num,
+        'mel_scale': 'htk',
+        }
+    )
 
-def extract_video_audio():
     while True:
         try:
             results = res_queue.get()
@@ -135,7 +173,7 @@ def extract_video_audio():
             res_queue.task_done()
             return
 
-        file_path, ouput_path, start, end, all_boxes, all_probs, save_image = results
+        file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate, save_image = results
         np.savez_compressed(
             ouput_path, 
             start=start,
@@ -143,16 +181,30 @@ def extract_video_audio():
             all_boxes=all_boxes,
             all_probs=all_probs,
         )
-        save(file_path, ouput_path, start, end, all_boxes, all_probs, save_image)
+        if save_image:
+            save(
+                file_path, 
+                ouput_path, 
+                start, 
+                end, 
+                all_boxes, 
+                all_probs, 
+                resample_rate,
+                spectrogram,
+                mel_spectrogram,
+                mfcc_transform,
+            )
         res_queue.task_done()
     
 
 def worker(
-    output_dir, 
+    output_dir,
+    save_image,
     num_iters, 
     device, 
     max_clip_len,
     skip_num,
+    resample_rate,
     no_cache,
 ):    
     try:
@@ -190,17 +242,25 @@ def worker(
                     start = max(0, duration-max_clip_len) * np.random.rand()
                     end = min(start + max_clip_len, duration)
 
-                    audioclip = audioclip.subclip(start, end)
-                    videoclip = videoclip.subclip(start, end)
+                    clip = videoclip.subclip(start, end)
                     
                     video = []
-                    for frame in videoclip.iter_frames():
+                    for frame in clip.iter_frames():
                         video += [frame]
                     video = np.array(video)
 
                     all_boxes, all_probs = crop_faces(face_detector, video, skip_num)
                     ouput_path = f"{output_dir}/{file_name}_{iteration}"
-                    res_queue.put((file_path, ouput_path, start, end, all_boxes, all_probs, save_image))
+                    res_queue.put((
+                        file_path, 
+                        ouput_path, 
+                        start, 
+                        end, 
+                        all_boxes, 
+                        all_probs, 
+                        resample_rate, 
+                        save_image
+                    ))
                     
         except Exception as e:
             queue.put(file_path)
@@ -224,18 +284,23 @@ def main(args):
     workers = []
     for _ in range(args.workers):
         process = Process(target=worker, args=(
-            args.output, 
+            args.output,
+            args.save_image,
             config['num_samples_per_video'],
             config['device'],
             config['max_clip_len'],
             config['face_detection_step'],
+            config['resample_rate'],
             args.no_cache,
         ))
         process.start()
         workers.append(process)
 
     for _ in range(2 * args.workers):
-        extractor = Process(target=extract_video_audio)
+        extractor = Process(target=extract_video_audio, args=(
+            config['freq_num'],
+            config['resample_rate'],
+        ))
         extractor.start()
         workers.append(extractor)
 

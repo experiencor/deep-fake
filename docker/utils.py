@@ -7,7 +7,6 @@ import albumentations as A
 import logging
 import numpy as np
 import json
-import torchaudio.transforms as T  
 from pynvml import *
 import torch.nn.functional as F
 from pytorchvideo.transforms import (
@@ -28,33 +27,6 @@ import augly.image as imaugs
 config = json.load(open("config.json"))
 image_size = config["video_size"]
 
-spectrogram = T.Spectrogram(
-    n_fft=2*config["freq_num"]-1,
-    hop_length=1024,
-    center=True,
-    pad_mode="reflect",
-    power=2.0,
-)
-mel_spectrogram = T.MelSpectrogram(
-    sample_rate=config["resample_rate"],
-    n_fft=2048,
-    center=True,
-    pad_mode="reflect",
-    power=2.0,
-    norm='slaney',
-    onesided=True,
-    n_mels=config["freq_num"],
-    mel_scale="htk",
-)
-mfcc_transform = T.MFCC(
-    sample_rate=config["resample_rate"],
-    n_mfcc=config["freq_num"],
-    melkwargs={
-    'n_fft': 2048,
-    'n_mels': config["freq_num"],
-    'mel_scale': 'htk',
-    }
-)
 
 def bgr2ycbcr(img_bgr):
     img_bgr = img_bgr.astype(np.float32)
