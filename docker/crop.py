@@ -19,9 +19,6 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
 fail_queue = JoinableQueue()
 
-freg_num = 80
-hop_length = 1024
-
 
 def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
     if boxes is None:
@@ -58,7 +55,7 @@ def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
     return frame[y:t, x:z, :], probs[face_idx]
 
 
-def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=8):
+def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6):
     all_boxes, all_probs = [], []
 
     indices = range(0, len(frames), skip_num)
@@ -148,7 +145,7 @@ def worker(
 
         spectrogram = T.Spectrogram(
             n_fft=2*freq_num-1,
-            hop_length=hop_length,
+            hop_length=1024,
             center=True,
             pad_mode="reflect",
             power=2.0,
@@ -161,15 +158,15 @@ def worker(
             power=2.0,
             norm='slaney',
             onesided=True,
-            n_mels=freg_num,
+            n_mels=freq_num,
             mel_scale="htk",
         )
         mfcc_transform = T.MFCC(
             sample_rate=resample_rate,
-            n_mfcc=freg_num,
+            n_mfcc=freq_num,
             melkwargs={
             'n_fft': 2048,
-            'n_mels': freg_num,
+            'n_mels': freq_num,
             'mel_scale': 'htk',
             }
         )
@@ -226,7 +223,6 @@ def worker(
                         plt.imsave(f"{ouput_path}/spec.png", spec)
                         plt.imsave(f"{ouput_path}/mel.png", mel)
                         plt.imsave(f"{ouput_path}/mfcc.png", mfcc)
-
         except Exception as e:
             queue.put(file_path)
             fail_queue.put(file_path)
@@ -251,13 +247,13 @@ def main(args):
     for _ in range(args.workers):
         process = Process(target=worker, args=(
             args.output, 
-            args.save_image, 
-            config['num_sample_per_video'],
+            args.save_image,
+            config['num_samples_per_video'],
             config['device'],
             config['max_clip_len'],
             config['resample_rate'],
-            config['freg_number'],
-            config['skip_number'],
+            config['freq_num'],
+            config['face_detection_step'],
             args.no_cache,
         ))
         process.start()

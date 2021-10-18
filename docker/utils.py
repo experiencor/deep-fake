@@ -25,7 +25,7 @@ import albumentations as A
 import augly.image as imaugs
 
 config = json.load(open("config.json"))
-image_size = config["frame_size"]
+image_size = config["video_size"]
 
 def bgr2ycbcr(img_bgr):
     img_bgr = img_bgr.astype(np.float32)
@@ -156,7 +156,7 @@ transform = ApplyTransformToKey(
     key="video",
     transform=Compose(
         [
-            UniformTemporalSubsample(config["frame_number"]),
+            UniformTemporalSubsample(config["video_len"]),
             Lambda(lambda x: x / 1.0),
             Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
             PackPathway()
