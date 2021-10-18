@@ -111,6 +111,9 @@ def save(file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate,
     mel  = librosa.power_to_db(mel_spectrogram(audio))
     mfcc = librosa.power_to_db(mfcc_transform(audio))
 
+    faces = [face for (face, prob) in zip(all_the_faces, all_the_probs) if prob > 0]
+    probs = [prob for prob in all_the_probs if prob > 0]
+
     if save_image:
         create_folder(ouput_path)
         for i, (face, prob) in enumerate(zip(faces, probs)):
@@ -132,7 +135,7 @@ def extract_video_audio():
             res_queue.task_done()
             return
 
-        file_path, ouput_path, start, end, all_boxes, all_probs = results
+        file_path, ouput_path, start, end, all_boxes, all_probs, save_image = results
         np.savez_compressed(
             ouput_path, 
             start=start,
@@ -140,7 +143,7 @@ def extract_video_audio():
             all_boxes=all_boxes,
             all_probs=all_probs,
         )
-        save(file_path, ouput_path, start, end, all_boxes, all_probs)
+        save(file_path, ouput_path, start, end, all_boxes, all_probs, save_image)
         res_queue.task_done()
     
 
@@ -197,7 +200,7 @@ def worker(
 
                     all_boxes, all_probs = crop_faces(face_detector, video, skip_num)
                     ouput_path = f"{output_dir}/{file_name}_{iteration}"
-                    res_queue.put((file_path, ouput_path, start, end, all_boxes, all_probs))
+                    res_queue.put((file_path, ouput_path, start, end, all_boxes, all_probs, save_image))
                     
         except Exception as e:
             queue.put(file_path)
