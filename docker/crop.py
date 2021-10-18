@@ -89,7 +89,25 @@ def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6):
 
 
 def save():
+    audioclip = audioclip.subclip(start, end)
+    videoclip = videoclip.subclip(start, end)
+    
+    video = []
+    for frame in videoclip.iter_frames():
+        video += [frame]
+    video = np.array(video)
 
+    audio = audioclip.to_soundarray()[:, 0]
+    audio_rate = int(len(audio)/(end - start))
+    audio = torch.tensor(librosa.resample(
+        audio,
+        audio_rate,
+        resample_rate
+    )).float()
+
+    spec = librosa.power_to_db(spectrogram(audio))
+    mel  = librosa.power_to_db(mel_spectrogram(audio))
+    mfcc = librosa.power_to_db(mfcc_transform(audio))
 
 def extract_video_audio():
     while True:
