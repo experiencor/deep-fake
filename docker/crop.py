@@ -14,6 +14,7 @@ from moviepy.editor import AudioFileClip, VideoFileClip
 import torch        
 import torchaudio.transforms as T        
 from retinaface.predict_single import Model
+from utils import spectrogram, mel_spectrogram, mfcc_transform
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
@@ -88,10 +89,10 @@ def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6):
     return return_boxes, return_probs
 
 
-def save():
-    audioclip = audioclip.subclip(start, end)
-    videoclip = videoclip.subclip(start, end)
-    
+def save(file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate):
+    audioclip = AudioFileClip(file_path).subclip(start, end)
+    videoclip = VideoFileClip(file_path).subclip(start, end)
+
     video = []
     for frame in videoclip.iter_frames():
         video += [frame]
