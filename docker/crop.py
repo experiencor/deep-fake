@@ -17,6 +17,7 @@ from retinaface.predict_single import Model
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
+res_queue = JoinableQueue()
 fail_queue = JoinableQueue()
 
 
@@ -83,7 +84,7 @@ def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6):
             distance += 1
 
         face, prob = apply_crop(frame, boxes, probs)
-        return_faces += [face]
+        return_faces += [face.astype(np.float16)]
         return_probs += [prob]
     return return_faces, return_probs
 
@@ -117,10 +118,42 @@ def extract_video_audio(
         resample_rate
     )).float()
 
-    spec = librosa.power_to_db(spectrogram(audio))
-    mel  = librosa.power_to_db(mel_spectrogram(audio))
-    mfcc = librosa.power_to_db(mfcc_transform(audio))
+    spec = librosa.power_to_db(spectrogram(audio)).astype(np.float16)
+    mel  = librosa.power_to_db(mel_spectrogram(audio)).astype(np.float16)
+    mfcc = librosa.power_to_db(mfcc_transform(audio)).astype(np.float16)
+    audio = audio.half()
     return audio_rate, video, audio, spec, mel, mfcc
+
+
+def saver():
+    while True:
+        try:
+            results = res_queue.get()
+        except Exception as e:
+            log(e)
+            continue
+
+        if results is None:
+            res_queue.task_done()
+            return
+
+        ouput_path, faces, audio, spec, mel, mfcc, probs, save_image = results
+        np.savez_compressed(
+            ouput_path, 
+            faces=faces,
+            audio=audio,
+            spec=spec,
+            mel=mel,
+            mfcc=mfcc
+        )
+        if save_image:
+            create_folder(ouput_path)
+            for i, (face, prob) in enumerate(zip(faces, probs)):
+                cv2.imwrite(f"{ouput_path}/{i}_{prob}.png", face)
+            plt.imsave(f"{ouput_path}/spec.png", spec)
+            plt.imsave(f"{ouput_path}/mel.png", mel)
+            plt.imsave(f"{ouput_path}/mfcc.png", mfcc)
+        res_queue.task_done()
     
 
 def worker(
@@ -208,21 +241,8 @@ def worker(
                     probs = [prob for prob in probs if prob > 0]
 
                     ouput_path = f"{output_dir}/{file_name}_{iteration}"
-                    np.savez_compressed(
-                        ouput_path, 
-                        faces=faces,
-                        audio=audio,
-                        spec=spec,
-                        mel=mel,
-                        mfcc=mfcc
-                    )
-                    if save_image:
-                        create_folder(ouput_path)
-                        for i, (face, prob) in enumerate(zip(faces, probs)):
-                            cv2.imwrite(f"{ouput_path}/{i}_{prob}.png", face)
-                        plt.imsave(f"{ouput_path}/spec.png", spec)
-                        plt.imsave(f"{ouput_path}/mel.png", mel)
-                        plt.imsave(f"{ouput_path}/mfcc.png", mfcc)
+                    res_queue.put((ouput_path, faces, audio, spec, mel, mfcc, probs, save_image))
+                    
         except Exception as e:
             queue.put(file_path)
             fail_queue.put(file_path)
@@ -230,7 +250,6 @@ def worker(
             log(e)
             log(f"number of failed videos: {fail_queue.qsize()}")
             traceback.print_exc()
-
         queue.task_done()
         
 
@@ -258,10 +277,20 @@ def main(args):
         ))
         process.start()
         workers.append(process)
+
+    for _ in range(8 * args.workers):
+        save = Process(target=saver)
+        save.start()
+        workers.append(save)
+
     queue.join()
+    res_queue.join()
 
     for _ in range(args.workers):
         queue.put(None)
+
+    for _ in range(8 * args.workers):
+        res_queue.put(None)
 
     for w in workers:
         w.join()
