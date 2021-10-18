@@ -88,35 +88,10 @@ def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6):
     return return_boxes, return_probs
 
 
-def extract_video_audio(resample_rate, freq_num):
-    spectrogram = T.Spectrogram(
-        n_fft=2*freq_num-1,
-        hop_length=1024,
-        center=True,
-        pad_mode="reflect",
-        power=2.0,
-    )
-    mel_spectrogram = T.MelSpectrogram(
-        sample_rate=resample_rate,
-        n_fft=2048,
-        center=True,
-        pad_mode="reflect",
-        power=2.0,
-        norm='slaney',
-        onesided=True,
-        n_mels=freq_num,
-        mel_scale="htk",
-    )
-    mfcc_transform = T.MFCC(
-        sample_rate=resample_rate,
-        n_mfcc=freq_num,
-        melkwargs={
-        'n_fft': 2048,
-        'n_mels': freq_num,
-        'mel_scale': 'htk',
-        }
-    )
+def save():
 
+
+def extract_video_audio():
     while True:
         try:
             results = res_queue.get()
@@ -128,52 +103,20 @@ def extract_video_audio(resample_rate, freq_num):
             res_queue.task_done()
             return
 
-        file_path, ouput_path, start, end, return_boxes, return_probs, save_image = results
-        audioclip = AudioFileClip(file_path).subclip(start, end)
-        videoclip = VideoFileClip(file_path).subclip(start, end)
-
-        all_the_faces, all_the_probs = [], []
-        for frame, boxes, probs in zip(videoclip.iter_frames(), return_boxes, return_probs):
-            face, prob = apply_crop(frame, boxes, probs)
-            all_the_faces += [face]
-            all_the_probs += [prob]
-
-        audio = audioclip.to_soundarray()[:, 0]
-        audio_rate = int(len(audio)/(end - start))
-        audio = torch.tensor(librosa.resample(
-            audio,
-            audio_rate,
-            resample_rate
-        )).float()
-
-        spec = librosa.power_to_db(spectrogram(audio)).astype(np.float16)
-        mel  = librosa.power_to_db(mel_spectrogram(audio)).astype(np.float16)
-        mfcc = librosa.power_to_db(mfcc_transform(audio)).astype(np.float16)
-
-        faces = [face for (face, prob) in zip(all_the_faces, all_the_probs) if prob > 0]
-        probs = [prob for prob in all_the_probs if prob > 0]
-
+        file_path, ouput_path, start, end, all_boxes, all_probs = results
         np.savez_compressed(
             ouput_path, 
-            faces=faces,
-            audio=audio,
-            spec=spec,
-            mel=mel,
-            mfcc=mfcc
+            start=start,
+            end=end,
+            all_boxes=all_boxes,
+            all_probs=all_probs,
         )
-        if save_image:
-            create_folder(ouput_path)
-            for i, (face, prob) in enumerate(zip(faces, probs)):
-                cv2.imwrite(f"{ouput_path}/{i}_{prob}.png", face)
-            plt.imsave(f"{ouput_path}/spec.png", spec)
-            plt.imsave(f"{ouput_path}/mel.png", mel)
-            plt.imsave(f"{ouput_path}/mfcc.png", mfcc)
+        save(file_path, ouput_path, start, end, all_boxes, all_probs)
         res_queue.task_done()
     
 
 def worker(
     output_dir, 
-    save_image, 
     num_iters, 
     device, 
     max_clip_len,
@@ -223,9 +166,9 @@ def worker(
                         video += [frame]
                     video = np.array(video)
 
-                    boxes, probs = crop_faces(face_detector, video, skip_num)
+                    all_boxes, all_probs = crop_faces(face_detector, video, skip_num)
                     ouput_path = f"{output_dir}/{file_name}_{iteration}"
-                    res_queue.put((file_path, ouput_path, start, end, boxes, probs, save_image))
+                    res_queue.put((file_path, ouput_path, start, end, all_boxes, all_probs))
                     
         except Exception as e:
             queue.put(file_path)
@@ -250,7 +193,6 @@ def main(args):
     for _ in range(args.workers):
         process = Process(target=worker, args=(
             args.output, 
-            args.save_image,
             config['num_samples_per_video'],
             config['device'],
             config['max_clip_len'],
@@ -260,11 +202,8 @@ def main(args):
         process.start()
         workers.append(process)
 
-    for _ in range(1 * args.workers):
-        extractor = Process(target=extract_video_audio, args=(
-            config['resample_rate'],
-            config['freq_num'],
-        ))
+    for _ in range(2 * args.workers):
+        extractor = Process(target=extract_video_audio)
         extractor.start()
         workers.append(extractor)
 
@@ -274,7 +213,7 @@ def main(args):
     for _ in range(args.workers):
         queue.put(None)
 
-    for _ in range(1 * args.workers):
+    for _ in range(2 * args.workers):
         res_queue.put(None)
 
     for w in workers:
@@ -287,7 +226,6 @@ if __name__ == "__main__":
     parser.add_argument("--workers",    type=int,   required=True, help="Number of workers")
     parser.add_argument("--input",      type=str,   required=True, help="Input directory of raw videos")
     parser.add_argument("--output",     type=str,   required=True, help="Output directory of faces")
-    parser.add_argument("--save-image", action='store_true')
     parser.add_argument("--no-cache",   action='store_true')
 
     args = parser.parse_args()
