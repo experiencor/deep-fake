@@ -89,14 +89,15 @@ def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6):
     return return_boxes, return_probs
 
 
-def save(file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate):
+def save(file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate, save_image):
     audioclip = AudioFileClip(file_path).subclip(start, end)
     videoclip = VideoFileClip(file_path).subclip(start, end)
 
-    video = []
-    for frame in videoclip.iter_frames():
-        video += [frame]
-    video = np.array(video)
+    all_the_faces, all_the_probs = [], []
+    for frame, boxes, probs in zip(videoclip.iter_frames(), all_boxes, all_probs):
+        face, prob = apply_crop(frame, boxes, probs)
+        all_the_faces += [face]
+        all_the_probs += [prob]
 
     audio = audioclip.to_soundarray()[:, 0]
     audio_rate = int(len(audio)/(end - start))
@@ -109,6 +110,15 @@ def save(file_path, ouput_path, start, end, all_boxes, all_probs, resample_rate)
     spec = librosa.power_to_db(spectrogram(audio))
     mel  = librosa.power_to_db(mel_spectrogram(audio))
     mfcc = librosa.power_to_db(mfcc_transform(audio))
+
+    if save_image:
+        create_folder(ouput_path)
+        for i, (face, prob) in enumerate(zip(faces, probs)):
+            cv2.imwrite(f"{ouput_path}/{i}_{prob}.png", face)
+        plt.imsave(f"{ouput_path}/spec.png", spec)
+        plt.imsave(f"{ouput_path}/mel.png", mel)
+        plt.imsave(f"{ouput_path}/mfcc.png", mfcc)
+
 
 def extract_video_audio():
     while True:
