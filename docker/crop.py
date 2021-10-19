@@ -106,7 +106,6 @@ def extract_audio_video(
 
         select_faces, select_probs = [], []
         for frame, boxes, probs in zip(videoclip.iter_frames(), all_boxes, all_probs):
-            print(file_path)
             face, prob = apply_crop(frame, boxes, probs)
             select_faces += [face]
             select_probs += [prob]
