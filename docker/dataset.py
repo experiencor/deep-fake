@@ -1,4 +1,5 @@
 from __future__ import annotations
+import traceback
 
 from typing import Any, Callable, Optional
 import numpy as np
@@ -103,6 +104,7 @@ class Dataset(torch.utils.data.Dataset):
             #plt.imsave(f"/data/temp/mel.png", mel)
         except Exception as e:
             log(e)
+            traceback.print_exc()
 
         sample_dict = {
             "video": torch.permute(torch.tensor(faces), (3, 0, 1, 2)),
