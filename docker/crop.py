@@ -104,32 +104,32 @@ def extract_audio_video(
         audioclip = AudioFileClip(file_path).subclip(start, end)
         videoclip = VideoFileClip(file_path).subclip(start, end)
 
-    select_faces, select_probs = [], []
-    for frame, boxes, probs in zip(videoclip.iter_frames(), all_boxes, all_probs):
-        face, prob = apply_crop(frame, boxes, probs)
-        select_faces += [face]
-        select_probs += [prob]
+        select_faces, select_probs = [], []
+        for frame, boxes, probs in zip(videoclip.iter_frames(), all_boxes, all_probs):
+            face, prob = apply_crop(frame, boxes, probs)
+            select_faces += [face]
+            select_probs += [prob]
 
-    try:
-        audio = audioclip.to_soundarray()
-        audio = audio[:, 0]
-        audio_rate = int(len(audio)/(end - start))
-        audio = torch.tensor(librosa.resample(
-            audio,
-            audio_rate,
-            resample_rate
-        )).float()
+        try:
+            audio = audioclip.to_soundarray()
+            audio = audio[:, 0]
+            audio_rate = int(len(audio)/(end - start))
+            audio = torch.tensor(librosa.resample(
+                audio,
+                audio_rate,
+                resample_rate
+            )).float()
 
-        spec = librosa.power_to_db(spectrogram(audio))
-        mel  = librosa.power_to_db(mel_spectrogram(audio))
-        mfcc = librosa.power_to_db(mfcc_transform(audio))
-    except Exception as e:
-        log("No audio found!")
-        spec, mel, mfcc = [None for _ in range(3)]
+            spec = librosa.power_to_db(spectrogram(audio))
+            mel  = librosa.power_to_db(mel_spectrogram(audio))
+            mfcc = librosa.power_to_db(mfcc_transform(audio))
+        except Exception as e:
+            log("No audio found!")
+            spec, mel, mfcc = [None for _ in range(3)]
 
-    faces = [face for (face, prob) in zip(select_faces, select_probs) if prob > 0]
-    probs = [prob for prob in select_probs if prob > 0]
-    return faces, probs, spec, mel, mfcc
+        faces = [face for (face, prob) in zip(select_faces, select_probs) if prob > 0]
+        probs = [prob for prob in select_probs if prob > 0]
+        return faces, probs, spec, mel, mfcc
 
 
 def worker(
