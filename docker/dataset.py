@@ -88,6 +88,7 @@ class Dataset(torch.utils.data.Dataset):
             )
             indices = list(range(len(faces)))
             np.random.shuffle(indices)
+            indices = indices[:self._video_len]
             faces = faces[sorted(indices),:,:,:]
             faces = np.array([
                 cv2.resize(face, (self._video_size, self._video_size)) for face in faces
