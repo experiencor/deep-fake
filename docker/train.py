@@ -29,18 +29,19 @@ def main(args):
         "max_lr":           config["lr"]
     }
     run = wandb.init(project="deepfake", config=wandb_config)
-    
+
     # set up the data
     data_module = DataLoader(
         args.data_version,
         config["root_path"],
-        config["frame_number"], 
-        config["frame_size"], 
-        config["train_batch_size"],
-        config["frame_number"],
-        config["freg_number"], 
-        config["audio_len"],
-        config['num_sample_per_video'],
+        config["train_batch_size"], 
+        config["freq_num"], 
+        config["video_len"],
+        config["video_size"],
+        config["audio_len"], 
+        config["audio_size"],
+        config['num_samples_per_video'],
+        config['resample_rate'],
     )        
 
     # create the model

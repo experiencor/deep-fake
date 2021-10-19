@@ -12,13 +12,14 @@ class DataLoader(pytorch_lightning.LightningDataModule):
     def __init__(self, 
         data_version, 
         root_path, 
-        frame_number, 
-        frame_size, 
         batch_size, 
-        frame_num,
         freq_num, 
+        video_len,
+        video_size,
         audio_len, 
-        num_eval_iters
+        audio_size,
+        num_eval_iters,
+        resample_rate
     ):
         super().__init__()
         self.data = pd.read_csv(f"{root_path}/data/{data_version}.csv")
@@ -31,36 +32,39 @@ class DataLoader(pytorch_lightning.LightningDataModule):
         self.num_eval_iters = num_eval_iters
 
         self.train_dataset = Dataset(
-            data_frame=self.train_data,
-            epoch=self.epoch,
-            frame_number=frame_number,
-            transform=transform,
-            augmentation=train_aug,
-            frame_size=frame_size,
-            frame_num=frame_num,
-            freq_num=freq_num,
-            audio_len=audio_len,
+            self.train_data,
+            self.epoch,
+            video_len,
+            video_size,
+            audio_len,
+            audio_size,
+            resample_rate,
+            freq_num,
+            transform,
+            train_aug,
         )
         self.val_dataset = Dataset(
-            data_frame=dev_data,
-            epoch=self.epoch,
-            frame_number=frame_number,
-            transform=transform,
-            augmentation=train_aug,
-            frame_size=frame_size,
-            frame_num=frame_num,
-            freq_num=freq_num,
-            audio_len=audio_len,
+            dev_data,
+            self.epoch,
+            video_len,
+            video_size,
+            audio_len,
+            audio_size,
+            resample_rate,
+            freq_num,
+            transform,
+            train_aug,
         )
         self.test_dataset = Dataset(
-            data_frame=test_data,
-            epoch=self.epoch,
-            frame_number=frame_number,
-            transform=transform,
-            frame_size=frame_size,
-            frame_num=frame_num,
-            freq_num=freq_num,
-            audio_len=audio_len,
+            test_data,
+            self.epoch,
+            video_len,
+            video_size,
+            audio_len,
+            audio_size,
+            resample_rate,
+            freq_num,
+            transform,
         )
 
     def train_dataloader(self):

@@ -15,13 +15,13 @@ class Dataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data_frame,
+        epoch,
         video_len,
         video_size,
         audio_len,
         audio_size,
         resample_rate,
         freq_num,
-        epoch: int = 0,
         transform: Optional[Callable[[dict], Any]] = None,
         augmentation = None,
     ) -> None:
