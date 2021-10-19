@@ -93,6 +93,7 @@ class Dataset(torch.utils.data.Dataset):
             faces = np.array([
                 cv2.resize(face, (self._video_size, self._video_size)) for face in faces
             ])
+            print("facesfacesfacesfaces", faces.shape)
 
             mel = cv2.resize(mel, (self._audio_len, self._audio_size))
             if self._augmentation is not None:
