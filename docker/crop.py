@@ -6,7 +6,6 @@ import traceback
 import json
 import time
 import numpy as np
-import torchaudio.transforms as T  
 from argparse import ArgumentParser
 from utils import log, create_folder
 import librosa

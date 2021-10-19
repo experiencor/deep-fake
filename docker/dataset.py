@@ -3,54 +3,97 @@ from __future__ import annotations
 from typing import Any, Callable, Optional
 import numpy as np
 import torch
+import torchaudio.transforms as T
 from utils import log
 import cv2
 import torch.utils.data
 import matplotlib.pylab as plt
+from crop import extract_audio_video
 
 
 class Dataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data_frame,
-        frame_size,
-        frame_num,
-        freq_num,
+        video_len,
+        video_size,
         audio_len,
+        audio_size,
+        resample_rate,
+        freq_num,
         epoch: int = 0,
         transform: Optional[Callable[[dict], Any]] = None,
-        frame_number: int = 32,
         augmentation = None,
     ) -> None:
         self._epoch = epoch
-        self._frame_size = frame_size
-        self._frame_num = frame_num
         self._data_frame = data_frame
         self._transform = transform
-        self._frame_number = frame_number
+        self._video_len = video_len
+        self._video_size = video_size
+        self._audio_len = audio_len
+        self._audio_size = audio_size
         self._augmentation = augmentation
-        self._freq_num = freq_num
-        self._audio_len = audio_len     
+        self._resample_rate = resample_rate
+
+        self._spectrogram = T.Spectrogram(
+            n_fft=2*freq_num-1,
+            hop_length=1024,
+            center=True,
+            pad_mode="reflect",
+            power=2.0,
+        )
+        self._mel_spectrogram = T.MelSpectrogram(
+            sample_rate=resample_rate,
+            n_fft=2048,
+            center=True,
+            pad_mode="reflect",
+            power=2.0,
+            norm='slaney',
+            onesided=True,
+            n_mels=freq_num,
+            mel_scale="htk",
+        )
+        self._mfcc_transform = T.MFCC(
+            sample_rate=resample_rate,
+            n_mfcc=freq_num,
+            melkwargs={
+            'n_fft': 2048,
+            'n_mels': freq_num,
+            'mel_scale': 'htk',
+            }
+        )
         
     def __len__(self):
         return len(self._data_frame)
     
     def __getitem__(self, video_index):
         data_row = self._data_frame.iloc[video_index]
-        prefix = data_row["prefix"]
+        meta_prefix = data_row["meta_prefix"]
+        video_prefix = data_row["video_prefix"]
         filename = data_row["filename"]
         label = int(data_row["label"])
         
         try:
-            metadata = np.load(f"{prefix}/{filename}_{self._epoch}.npz", allow_pickle=True)
-            faces = metadata["faces"]
-            faces = np.array([cv2.resize(face, (self._frame_size, self._frame_size)) for face in faces])
+            metadata = np.load(f"{meta_prefix}/{filename}_{self._epoch}.npz", allow_pickle=True)
+            faces, _, _, mel, _ = extract_audio_video(
+                f"{video_prefix}/{filename}", 
+                metadata["start"], 
+                metadata["end"], 
+                metadata["all_boxes"], 
+                metadata["all_probs"], 
+                self._resample_rate,
+                self._spectrogram,
+                self._mel_spectrogram,
+                self._mfcc_transform,  
+            )
             indices = list(range(len(faces)))
             np.random.shuffle(indices)
             faces = faces[sorted(indices),:,:,:]
+            faces = np.array([
+                cv2.resize(face, (self._video_size, self._video_size)) for face in faces
+            ])
 
-            mel = metadata["mel"]
-            mel = cv2.resize(mel, (self._audio_len, self._freq_num))
+            mel = cv2.resize(mel, (self._audio_len, self._audio_size))
             if self._augmentation is not None:
                 faces = np.array([self._augmentation(image = face)["image"] for face in faces])
                 #for _, face in enumerate(faces):
