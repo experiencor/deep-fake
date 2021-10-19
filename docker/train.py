@@ -25,7 +25,7 @@ def main(args):
         "pret_version":     args.pret_version,
         "num_gpu":          num_gpu,
         "batch_size":       config["train_batch_size"] * num_gpu,
-        "image_size":       config["frame_size"],
+        "image_size":       config["video_size"],
         "max_lr":           config["lr"]
     }
     run = wandb.init(project="deepfake", config=wandb_config)
