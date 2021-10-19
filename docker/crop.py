@@ -12,6 +12,7 @@ import librosa
 import torch
 from moviepy.editor import AudioFileClip, VideoFileClip
 import torch        
+import warnings
 import torchaudio.transforms as T        
 from retinaface.predict_single import Model
 
@@ -97,8 +98,11 @@ def extract_audio_video(
     mel_spectrogram,
     mfcc_transform,    
 ):
-    audioclip = AudioFileClip(file_path).subclip(start, end)
-    videoclip = VideoFileClip(file_path).subclip(start, end)
+    with warnings.catch_warnings():
+        # ignore all caught warnings
+        warnings.filterwarnings("ignore")
+        audioclip = AudioFileClip(file_path).subclip(start, end)
+        videoclip = VideoFileClip(file_path).subclip(start, end)
 
     select_faces, select_probs = [], []
     for frame, boxes, probs in zip(videoclip.iter_frames(), all_boxes, all_probs):
