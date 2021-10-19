@@ -109,7 +109,7 @@ def extract_audio_video(
             try:
                 face, prob = apply_crop(frame, boxes, probs)
             except:
-                print(file_path)
+                print(file_path, boxes, probs)
             select_faces += [face]
             select_probs += [prob]
 
