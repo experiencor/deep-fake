@@ -19,8 +19,8 @@ class Model(LightningModule):
     def __init__(self, total_steps, lr):
         super().__init__()
         self.model = create_audio_visual_slowfast(
-            model_num_class=2,
-            model_depth=18
+            model_depth=50,
+            head_pool_kernel_sizes=((16, 7, 7), (64, 7, 7), (32, 1, 10))
         )
         self.best_auc = 0
         self.total_steps = total_steps
