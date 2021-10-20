@@ -153,7 +153,7 @@ class PackPathway(torch.nn.Module):
         frame_list = [slow_pathway, fast_pathway]
         return frame_list
 
-transform = Compose(ApplyTransformToKey(
+transform = Compose([ApplyTransformToKey(
     key="video",
     transform=Compose(
         [
@@ -163,7 +163,7 @@ transform = Compose(ApplyTransformToKey(
             PackPathway()
         ]
     ),
-))
+)])
 
 def log(*args):
     print_mess = " ".join([str(arg) for arg in args])
