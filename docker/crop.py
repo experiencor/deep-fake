@@ -47,7 +47,7 @@ def apply_crop(frame, boxes, probs, margin=0.5):
     return frame[y:t, x:z, :], probs[face_idx]
 
 
-def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6, crop_threshold=0.975):
+def crop_faces(file_path, face_detector, frames, skip_num=4, crop_batch_size=9, crop_threshold=0.975):
     all_boxes, all_probs = [], []
 
     indices = range(0, len(frames), skip_num)
@@ -74,7 +74,7 @@ def crop_faces(face_detector, frames, skip_num=4, crop_batch_size=6, crop_thresh
             probs = all_probs[l] or all_probs[r]
             
             if l == 0 and r == len(all_probs)-1 and not boxes:
-                log("No faces found. Use raw frames!")
+                log("No faces found. Use raw frames!", file_path)
                 w, h = frames[0].shape[1:3]
                 return_boxes = [[[0, 0, h, w]] for _ in range(len(frames))]
                 return_probs = [[1] for _ in range(len(frames))]
@@ -108,10 +108,10 @@ def extract_audio_video(
         for frame, boxes, probs in zip(videoclip.iter_frames(), all_boxes, all_probs):
             try:
                 face, prob = apply_crop(frame, boxes, probs)
+                select_faces += [face]
+                select_probs += [prob]
             except:
-                print(file_path, boxes, probs)
-            select_faces += [face]
-            select_probs += [prob]
+                log(file_path, boxes, probs)
 
         try:
             audio = audioclip.to_soundarray()
@@ -215,7 +215,7 @@ def worker(
                         video += [frame]
                     video = np.array(video)
 
-                    all_boxes, all_probs = crop_faces(face_detector, video, skip_num)
+                    all_boxes, all_probs = crop_faces(file_path, face_detector, video, skip_num)
                     output_path = f"{output_dir}/{file_name}_{iteration}"
                     np.savez_compressed(
                         output_path,
