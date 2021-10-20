@@ -116,6 +116,8 @@ class Dataset(torch.utils.data.Dataset):
             "video_index": video_index,
             "filename": filename
         }
+
+        print(torch.mean(sample_dict["audio"]))
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)
         return sample_dict
