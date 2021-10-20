@@ -116,7 +116,7 @@ class Dataset(torch.utils.data.Dataset):
         }
 
         sample_dict["audio"] = (
-            (sample_dict["audio"] - torch.mean(sample_dict["audio"]))/torch.var(sample_dict["audio"])
+            (sample_dict["audio"] - torch.mean(sample_dict["audio"]))/torch.std(sample_dict["audio"])
         )
 
         print(sample_dict["audio"].shape, torch.mean(sample_dict["audio"]), torch.var(sample_dict["audio"]))
