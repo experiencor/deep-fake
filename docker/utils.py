@@ -153,24 +153,16 @@ class PackPathway(torch.nn.Module):
         frame_list = [slow_pathway, fast_pathway]
         return frame_list
 
-transform = Compose([ApplyTransformToKey(
-        key="video",
-        transform=Compose(
-            [
-                UniformTemporalSubsample(config["video_len"]),
-                Lambda(lambda x: x / 255.0),
-                Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
-                PackPathway()
-            ]
-        ),
-    ), ApplyTransformToKey(
-        key="audio",
-        transform=Compose(
-            [
-                Normalize((0.45, 0.45), (0.225, 0.225)),
-            ]
-        ),
-    )]
+transform = ApplyTransformToKey(
+    key="video",
+    transform=Compose(
+        [
+            UniformTemporalSubsample(config["video_len"]),
+            Lambda(lambda x: x / 255.0),
+            Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
+            PackPathway()
+        ]
+    ),
 )
 
 def log(*args):
