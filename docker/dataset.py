@@ -105,6 +105,7 @@ class Dataset(torch.utils.data.Dataset):
             log(e)
             traceback.print_exc()
         print(faces[0].shape, np.max(faces))
+        print(mel.shape, np.min(mel), np.max(mel))
 
         sample_dict = {
             "video": torch.permute(torch.tensor(faces), (3, 0, 1, 2)),
