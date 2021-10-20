@@ -168,7 +168,7 @@ transform = ApplyTransformToKey(
 
 audio_transform = Compose(
     [
-        Normalize([0.45], [0.225])
+        torchvision.transforms.Normalize([0.45], [0.225])
     ]
 )
 
