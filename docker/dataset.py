@@ -119,7 +119,7 @@ class Dataset(torch.utils.data.Dataset):
             (sample_dict["audio"] - torch.mean(sample_dict["audio"]))/torch.std(sample_dict["audio"])
         )
 
-        print(sample_dict["audio"].shape, torch.mean(sample_dict["audio"]), torch.var(sample_dict["audio"]))
+        print(sample_dict["audio"].shape, torch.max(sample_dict["audio"]), torch.min(sample_dict["audio"]))
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)
         return sample_dict
