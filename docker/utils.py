@@ -22,6 +22,7 @@ import cv2
 import math
 import PIL
 import albumentations as A
+import torchvision
 import augly.image as imaugs
 
 config = json.load(open("config.json"))
@@ -163,6 +164,12 @@ transform = ApplyTransformToKey(
             PackPathway()
         ]
     ),
+)
+
+audio_transform = Compose(
+    [
+        torchvision.transforms.Normalize((0.45, 0.45), (0.225, 0.225))
+    ]
 )
 
 def log(*args):

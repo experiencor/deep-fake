@@ -4,7 +4,7 @@ import torch.utils.data
 import torch
 import pandas as pd
 import albumentations as A
-from utils import train_aug, transform, set_seed
+from utils import train_aug, transform, set_seed, audio_transform
 from dataset import Dataset
 
 
@@ -41,6 +41,7 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             resample_rate,
             freq_num,
             transform,
+            audio_transform,
             train_aug,
         )
         self.val_dataset = Dataset(
@@ -53,6 +54,7 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             resample_rate,
             freq_num,
             transform,
+            audio_transform,
             train_aug,
         )
         self.test_dataset = Dataset(
@@ -65,6 +67,7 @@ class DataLoader(pytorch_lightning.LightningDataModule):
             resample_rate,
             freq_num,
             transform,
+            audio_transform,
         )
 
     def train_dataloader(self):

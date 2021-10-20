@@ -23,7 +23,8 @@ class Dataset(torch.utils.data.Dataset):
         audio_size,
         resample_rate,
         freq_num,
-        transform: Optional[Callable[[dict], Any]] = None,
+        transform,
+        audio_transform,
         augmentation = None,
     ) -> None:
         self._epoch = epoch
@@ -35,6 +36,7 @@ class Dataset(torch.utils.data.Dataset):
         self._audio_size = audio_size
         self._augmentation = augmentation
         self._resample_rate = resample_rate
+        self._audio_transform = audio_transform
 
         self._spectrogram = T.Spectrogram(
             n_fft=2*freq_num-1,
@@ -104,12 +106,10 @@ class Dataset(torch.utils.data.Dataset):
         except Exception as e:
             log(e)
             traceback.print_exc()
-        print(faces[0].shape, np.max(faces))
-        print(mel.shape, np.min(mel), np.max(mel))
 
         sample_dict = {
             "video": torch.permute(torch.tensor(faces), (3, 0, 1, 2)),
-            "audio": torch.tensor(mel).transpose(1,0),
+            "audio": self._if self._transform(torch.tensor(mel).transpose(1,0)),
             "label": label,
             "video_index": video_index,
             "filename": filename
