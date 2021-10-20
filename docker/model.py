@@ -41,7 +41,6 @@ class Model(LightningModule):
         fast = batch["video"][0]
         slow = batch["video"][1]
         audio = torch.unsqueeze(torch.unsqueeze(batch["audio"], 1), 3)
-        print(fast.shape, slow.shape, audio.shape)
         logits = self.model([fast, slow, audio])
         loss = F.cross_entropy(logits, batch["label"])
         mean_loss = torch.mean(self.all_gather(loss))

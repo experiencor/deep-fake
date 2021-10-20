@@ -158,8 +158,8 @@ transform = ApplyTransformToKey(
     transform=Compose(
         [
             UniformTemporalSubsample(config["video_len"]),
-            Lambda(lambda x: x / 1.0),
-            Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            Lambda(lambda x: x / 255.0),
+            Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
             PackPathway()
         ]
     ),
