@@ -115,7 +115,7 @@ class Dataset(torch.utils.data.Dataset):
             "filename": filename
         }
 
-        print(sample_dict["audio"].shape, torch.mean(sample_dict["audio"]), torch.variance(sample_dict["audio"]))
+        print(sample_dict["audio"].shape, torch.mean(sample_dict["audio"]), torch.var(sample_dict["audio"]))
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)
         return sample_dict
