@@ -107,19 +107,17 @@ class Dataset(torch.utils.data.Dataset):
             log(e)
             traceback.print_exc()
 
+        mel = torch.tensor(mel).transpose(1,0)
+        mel = (mel - torch.mean(mel))/torch.std(mel)
+
         sample_dict = {
             "video": torch.permute(torch.tensor(faces), (3, 0, 1, 2)),
-            "audio": torch.tensor(mel).transpose(1,0),
+            "audio": mel,
             "label": label,
             "video_index": video_index,
             "filename": filename
         }
 
-        sample_dict["audio"] = (
-            (sample_dict["audio"] - torch.mean(sample_dict["audio"]))/torch.std(sample_dict["audio"])
-        )
-
-        print(sample_dict["audio"].shape, torch.max(sample_dict["audio"]), torch.min(sample_dict["audio"]))
         if self._transform is not None:
             sample_dict = self._transform(sample_dict)
         return sample_dict
