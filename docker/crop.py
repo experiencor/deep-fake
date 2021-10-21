@@ -102,6 +102,8 @@ def extract_audio_video(
     with warnings.catch_warnings():
         # ignore all caught warnings
         warnings.filterwarnings("ignore")
+        print(file_path)
+
         tik = time.time()
         audioclip = AudioFileClip(file_path).subclip(start, end)
         print(f"\n\t audio", (time.time() - tik))
