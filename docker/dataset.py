@@ -39,13 +39,6 @@ class Dataset(torch.utils.data.Dataset):
         self._resample_rate = resample_rate
         self._audio_transform = audio_transform
 
-        self._spectrogram = T.Spectrogram(
-            n_fft=2*freq_num-1,
-            hop_length=1024,
-            center=True,
-            pad_mode="reflect",
-            power=2.0,
-        )
         self._mel_spectrogram = T.MelSpectrogram(
             sample_rate=resample_rate,
             n_fft=2048,
@@ -56,15 +49,6 @@ class Dataset(torch.utils.data.Dataset):
             onesided=True,
             n_mels=freq_num,
             mel_scale="htk",
-        )
-        self._mfcc_transform = T.MFCC(
-            sample_rate=resample_rate,
-            n_mfcc=freq_num,
-            melkwargs={
-            'n_fft': 2048,
-            'n_mels': freq_num,
-            'mel_scale': 'htk',
-            }
         )
         
     def __len__(self):
@@ -90,9 +74,9 @@ class Dataset(torch.utils.data.Dataset):
                 metadata["all_boxes"], 
                 metadata["all_probs"], 
                 self._resample_rate,
-                self._spectrogram,
+                None,
                 self._mel_spectrogram,
-                self._mfcc_transform,  
+                None,  
             )
             print("\nextract a/v", (time.time() - tik))
 
