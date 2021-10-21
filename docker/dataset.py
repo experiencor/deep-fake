@@ -62,11 +62,8 @@ class Dataset(torch.utils.data.Dataset):
         label = int(data_row["label"])
         
         try:
-            tik = time.time()
             metadata = np.load(f"{meta_prefix}/{filename}_{self._epoch}.npz", allow_pickle=True)
-            print(f"\n{video_index} load metadata", (time.time() - tik))
 
-            tik = time.time()
             faces, _, _, mel, _ = extract_audio_video(
                 f"{video_prefix}/{filename}", 
                 metadata["start"], 
@@ -78,9 +75,7 @@ class Dataset(torch.utils.data.Dataset):
                 self._mel_spectrogram,
                 None,  
             )
-            print(f"\n{video_index} extract a/v", (time.time() - tik))
 
-            tik = time.time()
             indices = list(range(len(faces)))
             np.random.shuffle(indices)
             indices = indices[:self._video_len]
@@ -92,7 +87,6 @@ class Dataset(torch.utils.data.Dataset):
             mel = cv2.resize(mel, (self._audio_len, self._audio_size))
             if self._augmentation is not None:
                 faces = np.array([self._augmentation(image = face)["image"] for face in faces])
-            print(f"\n{video_index} augmentation", (time.time() - tik))
 
             #for _, face in enumerate(faces):
             #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", face)

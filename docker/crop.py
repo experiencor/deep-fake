@@ -102,17 +102,9 @@ def extract_audio_video(
     with warnings.catch_warnings():
         # ignore all caught warnings
         warnings.filterwarnings("ignore")
-        print(file_path)
-
-        tik = time.time()
         audioclip = AudioFileClip(file_path).subclip(start, end)
-        print(f"\n\t audio", (time.time() - tik))
-
-        tik = time.time()
         videoclip = VideoFileClip(file_path).subclip(start, end)
-        print(f"\n\t video", (time.time() - tik))
 
-        tik = time.time()
         select_faces, select_probs = [], []
         for frame, boxes, probs in zip(videoclip.iter_frames(), all_boxes, all_probs):
             try:
@@ -121,7 +113,6 @@ def extract_audio_video(
                 select_probs += [prob]
             except:
                 log(file_path, boxes, probs)
-        print(f"\n\t video decoding", (time.time() - tik))
 
         try:
             audio = audioclip.to_soundarray()
