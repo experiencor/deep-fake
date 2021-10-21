@@ -2,6 +2,7 @@ from __future__ import annotations
 import traceback
 
 from typing import Any, Callable, Optional
+import time
 import numpy as np
 import torch
 import torchaudio.transforms as T
@@ -108,7 +109,7 @@ class Dataset(torch.utils.data.Dataset):
             if self._augmentation is not None:
                 faces = np.array([self._augmentation(image = face)["image"] for face in faces])
             print("\naugmentation", (time.time() - tik))
-            
+
             #for _, face in enumerate(faces):
             #    cv2.imwrite(f"/data/temp/{filename}_{_}.png", face)
             #plt.imsave(f"/data/temp/mel.png", mel)
