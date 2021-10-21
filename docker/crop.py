@@ -95,9 +95,9 @@ def extract_audio_video(
     all_boxes, 
     all_probs, 
     resample_rate,
-    spectrogram,
-    mel_spectrogram,
-    mfcc_transform,    
+    mel_spectrogram=None,
+    spectrogram=None,
+    mfcc_transform=None,    
 ):
     with warnings.catch_warnings():
         # ignore all caught warnings
@@ -124,9 +124,9 @@ def extract_audio_video(
                 resample_rate
             )).float()
 
-            spec = librosa.power_to_db(spectrogram(audio))     if spectrogram else None
-            mel  = librosa.power_to_db(mel_spectrogram(audio)) if mel_spectrogram else None
-            mfcc = librosa.power_to_db(mfcc_transform(audio))  if mfcc_transform else None
+            spec = librosa.power_to_db(spectrogram(audio))     if spectrogram       else None
+            mel  = librosa.power_to_db(mel_spectrogram(audio)) if mel_spectrogram   else None
+            mfcc = librosa.power_to_db(mfcc_transform(audio))  if mfcc_transform    else None
         except Exception as e:
             log("No audio found!")
             spec, mel, mfcc = [None for _ in range(3)]

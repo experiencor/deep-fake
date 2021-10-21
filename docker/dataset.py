@@ -71,9 +71,7 @@ class Dataset(torch.utils.data.Dataset):
                 metadata["all_boxes"], 
                 metadata["all_probs"], 
                 self._resample_rate,
-                None,
                 self._mel_spectrogram,
-                None,  
             )
 
             indices = list(range(len(faces)))
