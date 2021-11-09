@@ -7,3 +7,7 @@ pynvml==11.0.0
 albumentations==1.0.3
 scikit-learn==0.24.2
 wandb==0.9.6
+librosa==0.8.1
+augly==0.1.9
+moviepy==1.0.3
+filemagic==1.6

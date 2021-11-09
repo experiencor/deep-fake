@@ -1,42 +1,33 @@
 import cv2
 import os
-import torch
-from retinaface.pre_trained_models import get_model
-import multiprocessing
-from multiprocessing import Process, JoinableQueue, Queue
+import matplotlib.pylab as plt
+from multiprocessing import Process, JoinableQueue
 import traceback
 import json
-from torch.nn import functional as F
+import mxnet as mx
+from moviepy.video.io import ImageSequenceClip
 import time
+from retinaface.pre_trained_models import get_model
 import numpy as np
 from argparse import ArgumentParser
-from retinaface.box_utils import decode, decode_landm
 from utils import log, create_folder
-from torchvision.ops import nms
-import hashlib
-from retinaface.prior_box import priorbox
+import time
+import librosa
+import pickle
+import torch
+from moviepy.editor import AudioFileClip, VideoFileClip
+import torch        
+import torchaudio.transforms as T        
+from retinaface.predict_single import Model
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
+extraction_queue = JoinableQueue()
+output_queue = JoinableQueue()
 fail_queue = JoinableQueue()
-detection_queue = JoinableQueue()
-nms_queue = JoinableQueue()
-m = multiprocessing.Manager()
 
 
-ROUNDING_DIGITS = 2
-
-
-def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
-    if boxes is None:
-        return frame, -1
-
-    boxes = [box  for box, prob in zip(boxes, probs) if prob > crop_threshold]
-    probs = [prob for prob in probs if prob > crop_threshold]
-
-    if not boxes:
-        return frame, -1
-
+def apply_crop(frame, boxes, probs, margin=0.5):
     face_idx = np.random.randint(len(boxes))
     x, y, z, t = boxes[face_idx]
     x, y, z, t = int(x), int(y), int(z), int(t)
@@ -51,144 +42,209 @@ def apply_crop(frame, boxes, probs, crop_threshold=0.975, margin=0.5):
     t = center_y + size
     x = max(0, center_x - size)
     z = center_x + size
+
+    noise = int(0.05 * size)
+    y += np.random.randint(-noise, noise+1)
+    t += np.random.randint(-noise, noise+1)
+    x += np.random.randint(-noise, noise+1)
+    z += np.random.randint(-noise, noise+1)
+    y = max(0, y)
+    x = max(0, x)
     return frame[y:t, x:z, :], probs[face_idx]
 
 
-def crop_faces(frames, frame_size, crop_batch_size=4):
+def crop_faces(file_path, face_detector, frames, skip_num=4, crop_batch_size=8, crop_threshold=0.975):
     all_boxes, all_probs = [], []
 
-    for i in range(int(np.ceil(len(frames)/crop_batch_size))):
-        batch = frames[i*crop_batch_size: (i+1)*crop_batch_size]
-        results_queue = m.Queue()
-        detection_queue.put((batch, results_queue))
+    indices = range(0, len(frames), skip_num)
+    select_frames = frames[indices, :, :, :]
 
-        results = []
-        while len(results) < len(batch):
-            results += [results_queue.get()]
-        results.sort()
+    for i in range(int(np.ceil(len(select_frames)/crop_batch_size))):
+        batch = select_frames[i*crop_batch_size: (i+1)*crop_batch_size]
+        results = face_detector.predict_jsons_batch(batch)
+        boxes = [[box["bbox"]  for box in frame_result if box["score"] > crop_threshold] for frame_result in results]
+        probs = [[box["score"] for box in frame_result if box["score"] > crop_threshold] for frame_result in results]
 
-        boxes = [[box["bbox"]  for box in frame_result] for _, frame_result in results]
-        probs = [[box["score"] for box in frame_result] for _, frame_result in results]
+        all_boxes += boxes
+        all_probs += probs
 
-        all_boxes += list(boxes)
-        all_probs += list(probs)
+    return_boxes, return_probs = [], []
+    for i in range(len(frames)):
+        j = i // skip_num
+        distance = 0
+        boxes, probs = [], []
+        while not boxes:
+            l = max(0, j - distance)
+            r = min(j + distance, len(all_probs)-1)
+            boxes = all_boxes[l] or all_boxes[r]
+            probs = all_probs[l] or all_probs[r]
+            
+            if l == 0 and r == len(all_probs)-1 and not boxes:
+                log("No faces found. Use raw frames!", file_path)
+                w, h = frames[0].shape[1:3]
+                return_boxes = [[[0, 0, h, w]] for _ in range(len(frames))]
+                return_probs = [[1] for _ in range(len(frames))]
+                return return_boxes, return_probs
 
-    return_faces, return_probs = [], []
-    for frame, boxes, probs in zip(frames, all_boxes, all_probs):
-        face, prob = apply_crop(frame, boxes, probs)
-        face = cv2.resize(face, (frame_size, frame_size))
-        return_faces += [face]
-        return_probs += [prob]
-    
-    return return_faces, return_probs
+            distance += 1
+
+        return_boxes += [boxes]
+        return_probs += [probs]
+    return return_boxes, return_probs
 
 
-def detect_faces(device):
-    face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=device)
-    face_detector.eval()
+def extract(extractor_index, freq_num, resample_rate, num_iters):
+    spectrogram = T.Spectrogram(
+        n_fft=2*freq_num-1,
+        hop_length=1024,
+        center=True,
+        pad_mode="reflect",
+        power=2.0,
+    )
+    mel_spectrogram = T.MelSpectrogram(
+        sample_rate=resample_rate,
+        n_fft=2048,
+        center=True,
+        pad_mode="reflect",
+        power=2.0,
+        norm='slaney',
+        onesided=True,
+        n_mels=freq_num,
+        mel_scale="htk",
+    )
+    mfcc_transform = T.MFCC(
+        sample_rate=resample_rate,
+        n_mfcc=freq_num,
+        melkwargs={
+        'n_fft': 2048,
+        'n_mels': freq_num,
+        'mel_scale': 'htk',
+        }
+    )
 
     while True:
-        print(f"detection_queue size: {detection_queue.qsize()}")
-        frames, results_queue = detection_queue.get()
-        print(f"frames: {len(frames)}")
-        (bboxs, confs, lands), transformed_shape = face_detector.predict(frames)
-        bboxs = bboxs.cpu().detach().to(torch.float32)
-        confs = confs.cpu().detach().to(torch.float32)
-        lands = lands.cpu().detach().to(torch.float32)
+        print(">" * 60, "extraction_queue", extraction_queue.qsize())
+        elem = extraction_queue.get()
 
-        for frame_id, (frame, loc, conf, land) in enumerate(zip(frames, bboxs, confs, lands)):
-            nms_queue.put((frame_id, frame, loc, conf, land, transformed_shape, face_detector.variance, results_queue))
+        if elem == None:
+            extraction_queue.task_done()
+            return
 
+        file_path, index, iteration, save_image, start, end, select_faces, select_probs = elem
+        file_name = file_path.split("/")[-1]
+        
+        # print(f"from {extractor_index}, \textracting audio")
+        try:
+            audio = AudioFileClip(file_path).subclip(start, end).to_soundarray()
+            audio = audio[:, 0]
+            audio_rate = int(len(audio)/(end - start))
+            audio = torch.tensor(librosa.resample(
+                audio,
+                audio_rate,
+                resample_rate
+            )).float()
 
-def perform_nms(confidence_threshold: float = 0.7, nms_threshold: float = 0.4):
-    while True:
-        frame_id, frame, loc, conf, land, transformed_shape, variance, results_queue = nms_queue.get()
+            spec = librosa.power_to_db(spectrogram(audio))     if spectrogram       else None
+            mel  = librosa.power_to_db(mel_spectrogram(audio)) if mel_spectrogram   else None
+            mfcc = librosa.power_to_db(mfcc_transform(audio))  if mfcc_transform    else None
+        except Exception as e:
+            log("No audio found!", e)
+            audio = np.array([])
+            spec, mel, mfcc = [np.array([]) for _ in range(3)]
 
-        original_height, original_width = frame.shape[:2]
-        transformed_height, transformed_width = transformed_shape
-        transformed_size = (transformed_width, transformed_height)
-
-        scale_landmarks = torch.from_numpy(np.tile(transformed_size, 5))
-        scale_bboxes = torch.from_numpy(np.tile(transformed_size, 2))
-
-        prior_box = priorbox(
-            min_sizes=[[16, 32], [64, 128], [256, 512]],
-            steps=[8, 16, 32],
-            clip=False,
-            image_size=transformed_shape,
+        # print(f"from {extractor_index}, \tproducing the mp4")
+        index_to_write = index * (3 * num_iters) + 3 * iteration
+        clip = ImageSequenceClip.ImageSequenceClip(
+            select_faces, 
+            fps=25
         )
 
-        conf = F.softmax(conf, dim=-1)
+        # print(f"from {extractor_index}, \tadd items to output queue")
+        clip.write_videofile(f"{extractor_index}.mp4", verbose=False)
+        with open(f"{extractor_index}.mp4", "rb") as f:
+            output_queue.put((
+                index_to_write + 0,
+                f.read()
+            ))
+        os.system(f"rm {extractor_index}.mp4")
 
-        annotations: List[Dict[str, Union[List, float]]] = []
+        output_queue.put((
+            index_to_write + 1,
+            pickle.dumps(mel)
+        ))
 
-        boxes = decode(loc.data, prior_box, variance)
+        output_queue.put((
+            index_to_write + 2,
+            file_name.encode()
+        ))
 
-        boxes *= scale_bboxes
-        scores = conf[:, 1]
+        # print(f"from {extractor_index}, \tsaving the data")
+        if save_image:
+            create_folder("temp")
+            visible_folder = f"temp/{index}_{iteration}/"
+            create_folder(visible_folder)
+            for i, (face, prob) in enumerate(zip(select_faces, select_probs)):
+                cv2.imwrite(f"{visible_folder}/{i}_{prob}.png", face)
 
-        landmarks = decode_landm(land.data, prior_box, variance)
-        landmarks *= scale_landmarks
+            if spec is not None:
+                plt.imsave(f"{visible_folder}/spec.png", spec)
 
-        # ignore low scores
-        valid_index = torch.where(scores > confidence_threshold)[0]
-        boxes = boxes[valid_index]
-        landmarks = landmarks[valid_index]
-        scores = scores[valid_index]
+            if mel is not None:
+                plt.imsave(f"{visible_folder}/mel.png", mel)
 
-        # do NMS
-        keep = nms(boxes, scores, nms_threshold)
-        boxes = boxes[keep, :]
+            if mfcc is not None:
+                plt.imsave(f"{visible_folder}/mfcc.png", mfcc)
 
-        if boxes.shape[0] == 0:
-            results_queue.put((frame_id, [{"bbox": [], "score": -1, "landmarks": []}]))
-            continue
+        extraction_queue.task_done()
+        # print(f"from {extractor_index}, \tcompleted")
 
-        landmarks = landmarks[keep]
 
-        scores = scores[keep].cpu().numpy().astype(float)
+def output(output_file):
+    records = mx.recordio.MXIndexedRecordIO(
+        f'{output_file}.idx', f'{output_file}.rec', 'w'
+    )
 
-        boxes_np = boxes.cpu().numpy()
-
-        landmarks_np = landmarks.cpu().numpy()
-        resize_coeff = original_height / transformed_height
-
-        boxes_np *= resize_coeff
-        landmarks_np = landmarks_np.reshape(-1, 10) * resize_coeff
-
-        for box_id, bbox in enumerate(boxes_np):
-            x_min, y_min, x_max, y_max = bbox
-
-            x_min = np.clip(x_min, 0, original_width - 1)
-            x_max = np.clip(x_max, x_min + 1, original_width - 1)
-
-            if x_min >= x_max:
-                continue
-
-            y_min = np.clip(y_min, 0, original_height - 1)
-            y_max = np.clip(y_max, y_min + 1, original_height - 1)
-
-            if y_min >= y_max:
-                continue
-
-            annotations += [
-                {
-                    "bbox": np.round(bbox.astype(float), ROUNDING_DIGITS).tolist(),
-                    "score": np.round(scores, ROUNDING_DIGITS)[box_id],
-                    "landmarks": np.round(landmarks_np[box_id].astype(float), ROUNDING_DIGITS)
-                    .reshape(-1, 2)
-                    .tolist(),
-                }
-            ]
-
-        results_queue.put((frame_id, annotations))        
-    
-
-def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, frame_size):   
     while True:
-        file_path = queue.get()
+        print(">" * 60, "output_queue", output_queue.qsize())
+        elem = output_queue.get()
+
+        if elem == None:
+            records.close()
+            output_queue.task_done()
+            return
+
+        index, data = elem
+        records.write_idx(
+            index, 
+            data
+        )
+        output_queue.task_done()
+
+
+def work(
+    save_image,
+    num_iters, 
+    device, 
+    max_clip_len,
+    skip_num,
+    video_size
+):    
+    try:
+        face_detector = get_model(
+            model_name="resnet50_2020-07-20",
+            max_size=2048, 
+            device=device
+        )        
+        face_detector.eval()
+    except Exception as e:
+        log(e)
+        return
+
+    while True:
+        print(">" * 60, "queue", queue.qsize())
+        elem = queue.get()
         
-        if file_path is None:
+        if elem is None:
             queue.task_done()
             return
 
@@ -196,139 +252,125 @@ def worker(output_dir, save_image, no_cache, num_iters, device, frame_number, fr
             queue.task_done()
             continue
 
-        file_name = file_path.split("/")[-1]
-        seed = hashlib.sha224(file_name.encode('utf-8')).hexdigest()
-        seed = int(seed[16:20], 16)
-        np.random.seed(seed)        
+        index, file_path = elem
 
         try:
-            if not os.path.exists(f"{output_dir}/0/{file_name}.npy") or no_cache:
-                video = cv2.VideoCapture(file_path)
-                frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-                total_count = num_iters * frame_number
+            videoclip = VideoFileClip(file_path)
+            duration = videoclip.duration
 
-                all_the_indices = np.arange(frame_count)
-                np.random.shuffle(all_the_indices)
-                selected_indices = []
-                while len(all_the_indices) > 0:
-                    buffer_size     = int(1.2 * total_count)
-                    chosen_indices  = all_the_indices[:buffer_size]
-                    all_the_indices = all_the_indices[buffer_size:]
-                    chosen_indices  = sorted(chosen_indices)
+            for iteration in range(num_iters):
+                start = max(0, duration-max_clip_len) * np.random.rand()
+                end = min(start + max_clip_len, duration)
 
-                    frames = []
-                    i, j, _ = 0, 0, video.grab()
-                    while len(frames) < len(chosen_indices):
-                        if i == chosen_indices[j]:
-                            _, frame = video.retrieve()
-                            frames += [frame]
-                            j += 1
-                        _ = video.grab()
-                        i += 1
+                frames = []
+                for frame in videoclip.subclip(start, end).iter_frames():
+                    frames += [frame]
 
-                    faces, probs = crop_faces(frames, frame_size)
-                    for index, face, prob in zip(chosen_indices, faces, probs):
-                        if prob > 0:
-                            selected_indices += [[index, face, prob]]
+                indices = list(range(len(frames)))
+                np.random.shuffle(indices)
+                indices = indices[:96]
+                frames = [frames[i] for i in sorted(indices)]
+                frames = np.array(frames)
 
-                    if len(selected_indices) >= total_count:
-                        break
-                    video = cv2.VideoCapture(file_path)
-                else:
-                    log(f"found {len(selected_indices)} but required {total_count} for {file_name}")
+                all_boxes, all_probs = crop_faces(file_path, face_detector, frames, skip_num)
+                select_faces, select_probs = [], []
+                for frame, boxes, probs in zip(frames, all_boxes, all_probs):
+                    face, prob = apply_crop(frame, boxes, probs)
+                    select_faces += [cv2.resize(face, (video_size, video_size))]
+                    select_probs += [prob]
 
-                selected_indices = sorted(selected_indices)
-                detect_faces = [face for _, face, _ in selected_indices[:total_count]]
-                detect_probs = [prob for _, _, prob in selected_indices[:total_count]]
-
-                random_indices  = np.arange(len(detect_faces))
-                l_idx, r_idx    = 0, frame_number
-                increment       = (len(detect_faces) + 1 - frame_number) // num_iters
-                np.random.shuffle(random_indices)
-                for iteration in range(num_iters):
-                    iter_path = f"{output_dir}/{iteration}"
-                    create_folder(iter_path)
-                    
-                    select_indices = random_indices[l_idx:r_idx]
-                    select_indices = sorted(select_indices)
-
-                    iter_faces = np.array([detect_faces[i] for i in select_indices])
-                    iter_probs = np.array([detect_probs[i] for i in select_indices])
-                    np.save(f"{iter_path}/{file_name}.npy", iter_faces)
-
-                    if save_image:
-                        for i, (face, prob) in enumerate(zip(iter_faces, iter_probs)):
-                            image_path = f"{iter_path}/{file_name}"
-                            create_folder(image_path)
-                            cv2.imwrite(f"{image_path}/{i}_{prob}.png", face)
-
-                    l_idx += increment
-                    r_idx  = l_idx + frame_number
+                extraction_queue.put((
+                    file_path, 
+                    index, 
+                    iteration, 
+                    save_image, 
+                    start, 
+                    end, 
+                    select_faces, 
+                    select_probs
+                ))
         except Exception as e:
             queue.put(file_path)
-            fail_queue.put(file_path)
+            fail_queue.put((index, file_path))
             log("=" * 20)
             log(e)
             log(f"number of failed videos: {fail_queue.qsize()}")
             traceback.print_exc()
-
-        np.random.seed()
         queue.task_done()
         
 
 def main(args):
+    tik = time.time()
     config = json.load(open("config.json"))
     create_folder(args.output)
 
-    for f in os.listdir(args.input):
-        if f.endswith(".mp4"):
-            queue.put(f"{args.input}/{f}")
+    index = 0
+    files = [f for f in sorted(os.listdir(args.input)) if f.endswith(".mp4")]
+    for f in files:
+        queue.put((index, f"{args.input}/{f}"))
+        index += 1
 
-    video_workers = []
-    for _ in range(8):
-        video_worker = Process(target=worker, args=(
-            args.output, 
-            args.save_image, 
-            args.no_cache,
-            config['num_eval_iters'],
+    # start the workers
+    workers = []
+    for _ in range(args.num_workers):
+        worker = Process(target=work, args=(
+            args.save_image,
+            config['num_samples_per_video'],
             config['device'],
-            config['frame_number'],
-            config['frame_size']
+            config['max_clip_len'],
+            config['face_detection_step'],
+            config['video_size'],
         ))
-        video_worker.daemon = True
-        video_worker.start()
-        video_workers.append(video_worker)
+        worker.start()
+        workers.append(worker)
 
-    face_detection_worker = Process(target=detect_faces, args=(config['device'],))
-    face_detection_worker.daemon = True
-    face_detection_worker.start()
+    extractors = []
+    for i in range(args.num_workers):
+        extractor = Process(target=extract, args=(
+            i,
+            config['freq_num'],
+            config['resample_rate'],
+            config['num_samples_per_video'],            
+        ))
+        extractor.start()
+        extractors += [extractor]
 
-    npm_workers = []
-    for _ in range(16):
-        nms_worker = Process(target=perform_nms)
-        nms_worker.daemon = True
-        nms_worker.start()
-        npm_workers += [nms_worker]
+    outputer = Process(target=output, args=(
+        args.output,
+    ))
+    outputer.start()
 
+    # wait for the queue to be empty
     queue.join()
+    extraction_queue.join()
+    output_queue.join()
 
-    #for video_worker in video_workers:
-    #    video_worker.stop()
-    #for nms_worker in npm_workers:
-    #    nms_worker.stop()
-    #face_detection_worker.stop()
+    # put None stop the workers
+    for _ in range(args.num_workers):
+        queue.put(None)
 
-    #for w in workers:
-    #    w.join()
-        
+    for _ in range(args.num_workers):
+        extraction_queue.put(None)
+
+    output_queue.put(None)
+
+    # wait for the workers to finish
+    for worker in workers:
+        worker.join()
+
+    for extractor in extractors:
+        extractor.join()
+
+    outputer.join()
+    log(f'average crop time: {(time.time() - tik)/index}')
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--workers",    type=int,   required=True, help="Number of workers")
-    parser.add_argument("--input",      type=str,   required=True, help="Input directory of raw videos")
-    parser.add_argument("--output",     type=str,   required=True, help="Output directory of faces")
-    parser.add_argument("--save-image", action='store_true')
-    parser.add_argument("--no-cache",   action='store_true')
+    parser.add_argument("--num-workers",    type=int,   required=True, help="Number of workers")
+    parser.add_argument("--input",          type=str,   required=True, help="Input directory of raw videos")
+    parser.add_argument("--output",         type=str,   required=True, help="Output file of face and audio")
+    parser.add_argument("--save-image",     action='store_true')
 
     args = parser.parse_args()
     main(args)

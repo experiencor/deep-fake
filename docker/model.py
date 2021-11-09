@@ -1,15 +1,13 @@
-import pytorchvideo.data
 import torch.utils.data
 import torch.nn.functional as F
-import pytorchvideo.models.resnet
 import torch
 import torch.nn as nn
 import torchmetrics
 import albumentations as A
-from efficientnet_pytorch_3d import EfficientNet3D
 from utils import calc_prob
 from pytorch_lightning.core.lightning import LightningModule
 import wandb
+from timesformer.models.vit import TimeSformer
 
 
 train_auc   = torchmetrics.AUROC(pos_label=1)
@@ -20,7 +18,13 @@ test_auc    = torchmetrics.AUROC(pos_label=1)
 class Model(LightningModule):
     def __init__(self, total_steps, lr):
         super().__init__()
-        self.model = EfficientNet3D.from_name("efficientnet-b7", override_params={'num_classes': 2})
+        self.model = TimeSformer(
+            img_size=224, 
+            num_classes=2, 
+            num_frames=16, 
+            attention_type='divided_space_time',  
+        )
+
         self.best_auc = 0
         self.total_steps = total_steps
         self.lr = lr
@@ -29,16 +33,17 @@ class Model(LightningModule):
     def log_all(self, metrics):
         wandb.log(metrics, step=self.global_step)
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, batch):
+        return self.model(batch["video"], batch["audio"])
 
     def training_step(self, batch, _):
-        opt = self.optimizers()        
+        opt = self.optimizers()
         opt.zero_grad()
-        
         lr = [group['lr'] for group in opt.param_groups][0]
-        logits = self.model(batch["video"])
+        
+        logits = self.forward(batch)
         loss = F.cross_entropy(logits, batch["label"])
+
         mean_loss = torch.mean(self.all_gather(loss))
         train_auc.update(calc_prob(logits), batch["label"])
 
@@ -61,8 +66,9 @@ class Model(LightningModule):
             })
             
     def validation_step(self, batch, _):            
-        logits = self.model(batch["video"])
+        logits = self.forward(batch)
         loss = F.cross_entropy(logits, batch["label"])
+
         mean_loss = torch.mean(self.all_gather(loss))
         val_auc.update(calc_prob(logits), batch["label"])
         
@@ -88,7 +94,7 @@ class Model(LightningModule):
         self.log("val/auc", auc, sync_dist=True)
     
     def test_step(self, batch, _):
-        logits = self.model(batch["video"])
+        logits = self.forward(batch)
         test_auc.update(calc_prob(logits), batch["label"])
     
     def test_epoch_end(self, _):
@@ -103,7 +109,7 @@ class Model(LightningModule):
 
 
     def predict_step(self, batch, _):
-        return self(batch["video"])
+        return self.forward(batch)
         
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(

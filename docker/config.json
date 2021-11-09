@@ -1,13 +1,18 @@
 {
-    "frame_number": 4,
-    "frame_size": 224,
+    "num_samples_per_video": 1,
+    "max_clip_len": 16,
+    "resample_rate": 32768,
+    "freq_num": 128,
+    "face_detection_step": 256,
+    "audio_len": 448,
+    "audio_size": 128,
+    "video_len": 32,
+    "video_size": 224,
     "lr": 1e-4,
     "seed": 100,
     "device": "cuda",
-    "train_batch_size": 48,
-    "eval_batch_size": 4,
-    "weight_path": "/data/projects/deepfake/",
-    "data_path": "/home/utopia/projects/deepfake/",
-    "epoch": 32,
-    "num_eval_iters": 4
+    "train_batch_size": 4,
+    "submit_batch_size": 1,
+    "root_path": "/data/projects/deepfake/",
+    "epoch": 32
 }
