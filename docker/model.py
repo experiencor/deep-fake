@@ -20,7 +20,7 @@ class Model(LightningModule):
         super().__init__()
         self.model = TimeSformer(
             img_size=224, 
-            num_classes=128, 
+            num_classes=2, 
             num_frames=32, 
             attention_type='divided_space_time',  
         )
@@ -51,6 +51,7 @@ class Model(LightningModule):
         lr = [group['lr'] for group in opt.param_groups][0]
         
         logits = self.forward(batch)
+        print(logits, batch["label"])
         loss = F.cross_entropy(logits, batch["label"])
 
         mean_loss = torch.mean(self.all_gather(loss))
