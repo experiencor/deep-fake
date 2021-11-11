@@ -44,7 +44,7 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             metadata = np.load(f"{filepath}/{filename}.npz")
-            frames = metadata["faces"] + metadata["mel_3cs"]
+            frames = np.concat([metadata["faces"], metadata["mel_3cs"]], axis=0)
             print(frames.shape)
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
