@@ -43,7 +43,7 @@ class Model(LightningModule):
         audio_video = self.model(batch["video"])
         concat_input = torch.cat([audio_video, batch["latency"]], dim=1)
         logits = self.linear_relu_stack(concat_input)
-        return logits
+        return audio_video
 
     def training_step(self, batch, _):
         opt = self.optimizers()
