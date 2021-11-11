@@ -22,12 +22,12 @@ class Dataset(torch.utils.data.Dataset):
     
     def __getitem__(self, video_index):
         data_row = self._data_frame.iloc[video_index]
-        file_path = data_row["file_path"]
-        file_name = data_row["file_name"].split(".")[0]
+        filepath = data_row["filepath"]
+        filename = data_row["filename"].split(".")[0]
         label = int(data_row["label"])
         
         try:
-            metadata = np.load(f"{file_path}/{file_name}.npz")
+            metadata = np.load(f"{filepath}/{filename}.npz")
             frames = metadata["faces"] + metadata["mel_3"]
 
             if self._augmentation is not None:
