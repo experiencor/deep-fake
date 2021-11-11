@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torchaudio.transforms as T
 from utils import log
+import cv2
 import torch.utils.data
 
 latency_mean = torch.tensor([13.19363815, 13.19501656, 13.18659362, 13.17640294, 13.17066425, 13.17019671, 13.17482536, 
@@ -43,10 +44,11 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             metadata = np.load(f"{filepath}/{filename}.npz")
-
             frames = metadata["faces"] + metadata["mel_3cs"]
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
+            for i, frame in enumerate(frames):
+                cv2.imwrite(f"/data/temp/{i}.png", frame)
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
             latency = torch.tensor(np.array(list(mdist) + [offset] + [conf]))
             latency = (latency - latency_mean)/latency_std
