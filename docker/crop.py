@@ -148,31 +148,31 @@ def extract(save_image, frame_num, frame_size, output):
             mels = []
 
         mel_3cs = []
+        visible_folder = f"{output}/{file_name}"
+        create_folder(visible_folder)
+        
         if save_image:
-            visible_folder = f"{output}/{file_name}"
-            create_folder(visible_folder)
             for i, face in enumerate(select_faces):
                 cv2.imwrite(f"{visible_folder}/img_{'%05d' % (1+i)}.jpg", face)
 
-            if len(mels) > 0:
-                for i, mel in enumerate(mels):
-                    fig = plt.figure(figsize=[1,1])
-                    ax =fig.add_subplot(111)
-                    ax.axes.get_xaxis().set_visible(False)
-                    ax.axes.get_yaxis().set_visible(False)
-                    ax.set_frame_on(False)
+        if len(mels) > 0:
+            for i, mel in enumerate(mels):
+                fig = plt.figure(figsize=[1,1])
+                ax =fig.add_subplot(111)
+                ax.axes.get_xaxis().set_visible(False)
+                ax.axes.get_yaxis().set_visible(False)
+                ax.set_frame_on(False)
 
-                    librosa.display.specshow(mel)
+                librosa.display.specshow(mel)
+                plt.savefig(
+                    f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg", 
+                    dpi=1000, 
+                    bbox_inches="tight",
+                    pad_inches=0
+                )
+                plt.close('all')
 
-                    plt.savefig(
-                        f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg", 
-                        dpi=1000, 
-                        bbox_inches="tight",
-                        pad_inches=0
-                    )
-                    plt.close('all')
-
-                    mel_3cs += [cv2.imread(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg")]
+                mel_3cs += [cv2.imread(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg")]
 
         # save input as numpy array
         np.savez_compressed(f"{output}/{file_name}", 
