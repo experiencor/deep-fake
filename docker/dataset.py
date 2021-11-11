@@ -44,12 +44,11 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             metadata = np.load(f"{filepath}/{filename}.npz")
-            frames = np.concatenate([metadata["faces"], metadata["mel_3cs"]], axis=0)
-            print(frames.shape)
+            faces = metadata["faces"]
             if self._augmentation is not None:
-                frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
+                faces = np.array([self._augmentation(image = face)["image"] for face in faces])
+            frames = np.concatenate([faces, metadata["mel_3cs"]], axis=0)
             for i, frame in enumerate(frames):
-                print(i)
                 cv2.imwrite(f"/data/temp/{i}.png", frame)
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
             latency = torch.tensor(np.array(list(mdist) + [offset] + [conf]))
