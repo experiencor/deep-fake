@@ -30,10 +30,12 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             metadata = np.load(f"{filepath}/{filename}.npz")
-            frames = metadata["faces"] + metadata["mel_3cs"]
 
+            frames = metadata["faces"] + metadata["mel_3cs"]
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
+            mdist, offset, conf = metadata["mdist"], metadata["offset"], metadata["conf"]
+            latency = np.concatenate(mdist, offset, conf)
         except Exception as e:
             log(e)
             traceback.print_exc()
@@ -42,7 +44,8 @@ class Dataset(torch.utils.data.Dataset):
             "video": torch.permute(torch.tensor(frames), (3, 0, 1, 2)).half(),
             "label": label,
             "video_index": video_index,
-            "file_path": filename
+            "file_path": filename,
+            "latency": torch.tensor(latency).half(), 
         }
         sample_dict = self._transform(sample_dict)
         return sample_dict

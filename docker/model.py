@@ -20,9 +20,17 @@ class Model(LightningModule):
         super().__init__()
         self.model = TimeSformer(
             img_size=224, 
-            num_classes=2, 
+            num_classes=128, 
             num_frames=32, 
             attention_type='divided_space_time',  
+        )
+
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(768 + 33, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 2),
         )
 
         self.best_auc = 0
@@ -34,7 +42,10 @@ class Model(LightningModule):
         wandb.log(metrics, step=self.global_step)
 
     def forward(self, batch):
-        return self.model(batch["video"])
+        audio_video = self.model(batch["video"])
+        concat_input = torch.cat([audio_video, batch["latency"]])
+        logits = self.linear_relu_stack(concat_input)
+        return logits
 
     def training_step(self, batch, _):
         opt = self.optimizers()
