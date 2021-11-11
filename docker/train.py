@@ -48,7 +48,7 @@ def main(args):
     pretrain = torch.load(f"{config['root_path']}/pretrain/{args.pret_version}/model.ckpt")
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
-    missing_keys, unexpected_keys = model.load_state_dict(pretrain)
+    missing_keys, unexpected_keys = model.load_state_dict(pretrain, strict=False)
     log("missing_keys   :\t", missing_keys)
     log("unexpected_keys:\t", unexpected_keys)
     
