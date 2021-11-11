@@ -75,7 +75,7 @@ def main(args):
     #time.sleep(10)
 
     # perform evaluation on the test set
-    best_path = f"{config['weight_path']}/output/{run.id}/model.ckpt"
+    best_path = f"{config['root_path']}/output/{run.id}/model.ckpt"
     state_dict = torch.load(best_path)["state_dict"]
     model.load_state_dict(state_dict)
 
