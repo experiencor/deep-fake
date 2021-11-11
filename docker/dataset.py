@@ -35,8 +35,8 @@ class Dataset(torch.utils.data.Dataset):
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
-            print(mdist, offset, conf)
             latency = np.array(list(mdist) + [offset] + [conf])
+            latency = (latency - torch.mean(latency))/torch.std(latency)
         except Exception as e:
             log(e)
             traceback.print_exc()
@@ -46,7 +46,7 @@ class Dataset(torch.utils.data.Dataset):
             "label": label,
             "video_index": video_index,
             "file_path": filename,
-            "latency": torch.tensor(latency).half(), 
+            "latency": latency.half(), 
         }
         sample_dict = self._transform(sample_dict)
         return sample_dict
