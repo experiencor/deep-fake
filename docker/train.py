@@ -55,7 +55,7 @@ def main(args):
     # setup the trainer
     checkpoint_callback = ModelCheckpoint(
         monitor="val/auc",
-        dirpath=f"{config['weight_path']}/output/{run.id}",
+        dirpath=f"{config['root_path']}/output/{run.id}",
         filename="model",
         save_top_k=1,
         mode="max",
