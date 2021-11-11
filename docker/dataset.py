@@ -28,7 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             metadata = np.load(f"{filepath}/{filename}.npz")
-            print(metadata.keys())
+            print(list(metadata.keys()))
             frames = metadata["select_faces"] + metadata["mel_3"]
 
             if self._augmentation is not None:
