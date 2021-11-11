@@ -9,7 +9,7 @@ from dataset import Dataset
 
 
 class DataLoader(pytorch_lightning.LightningDataModule):
-    def __init__(self, data_version, root_path, frame_number, frame_size, batch_size):
+    def __init__(self, data_version, root_path, batch_size):
         super().__init__()
         self.video_path = f"{root_path}/data/{data_version}"
 
