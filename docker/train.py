@@ -33,7 +33,7 @@ def main(args):
     # set up the data
     data_module = DataLoader(
         args.data_version,
-        config["data_path"],
+        config["root_path"],
         config["frame_number"], 
         config["frame_size"],
         config["train_batch_size"]

@@ -23,22 +23,14 @@ class DataLoader(pytorch_lightning.LightningDataModule):
         
         self.train_dataset = Dataset(
             data_frame=self.train_data,
-            video_path_prefix=f"{self.video_path}/0",
-            frame_number=frame_number,
-            transform=transform,
             augmentation=train_aug,
         )
         self.val_dataset = Dataset(
             data_frame=dev_data,
-            video_path_prefix=f"{self.video_path}/0",
-            frame_number=frame_number,
-            transform=transform
+            augmentation=train_aug,
         )
         self.test_dataset = Dataset(
             data_frame=test_data,
-            video_path_prefix=f"{self.video_path}/0",
-            frame_number=frame_number,
-            transform=transform
         )
 
         self.num_sets = len(os.listdir(self.video_path))
@@ -46,10 +38,6 @@ class DataLoader(pytorch_lightning.LightningDataModule):
         self.batch_size = batch_size
 
     def train_dataloader(self):
-        set_idx = self.epoch % self.num_sets
-        self.train_dataset._video_path_prefix = f"{self.video_path}/{set_idx}"
-        self.epoch += 1
-        
         return torch.utils.data.DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,

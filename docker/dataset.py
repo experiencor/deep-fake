@@ -12,40 +12,10 @@ class Dataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data_frame,
-        epoch,
-        video_len,
-        video_size,
-        audio_len,
-        audio_size,
-        resample_rate,
-        num_eval_iters,
-        freq_num,
-        transform,
         augmentation = None,
     ) -> None:
-        self._epoch = epoch
         self._data_frame = data_frame
-        self._transform = transform
-        self._video_len = video_len
-        self._video_size = video_size
-        self._audio_len = audio_len
-        self._audio_size = audio_size
         self._augmentation = augmentation
-        self._resample_rate = resample_rate
-        self._num_eval_iters = num_eval_iters
-        self._data_files = {}
-
-        self._mel_spectrogram = T.MelSpectrogram(
-            sample_rate=resample_rate,
-            n_fft=2048,
-            center=True,
-            pad_mode="reflect",
-            power=2.0,
-            norm='slaney',
-            onesided=True,
-            n_mels=freq_num,
-            mel_scale="htk",
-        )
         
     def __len__(self):
         return len(self._data_frame)
@@ -53,10 +23,11 @@ class Dataset(torch.utils.data.Dataset):
     def __getitem__(self, video_index):
         data_row = self._data_frame.iloc[video_index]
         file_path = data_row["file_path"]
+        file_name = data_row["file_name"].split(".")[0]
         label = int(data_row["label"])
         
         try:
-            metadata = np.load(file_path)
+            metadata = np.load(f"{file_path}/{file_name}.npz")
             frames = metadata["faces"] + metadata["mel_3"]
 
             if self._augmentation is not None:
@@ -72,6 +43,4 @@ class Dataset(torch.utils.data.Dataset):
             "file_path": file_path
         }
 
-        if self._transform is not None:
-            sample_dict = self._transform(sample_dict)
         return sample_dict
