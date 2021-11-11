@@ -69,8 +69,8 @@ def crop_faces(file_path, face_detector, frames, skip_num=4, crop_batch_size=8, 
             if l == 0 and r == len(all_probs)-1 and not boxes:
                 log("No faces found. Use raw frames!", file_path)
                 w, h = frames[0].shape[1:3]
-                return_boxes = [[[0, 0, h, w]] for _ in range(len(frames))]
-                return_probs = [[1] for _ in range(len(frames))]
+                return_boxes = [[0, 0, h, w] for _ in range(len(frames))]
+                return_probs = [1 for _ in range(len(frames))]
                 return return_boxes, return_probs
 
             distance += 1
@@ -130,32 +130,19 @@ def extract(save_image, frame_num, frame_size, output):
         file_name = file_path.split("/")[-1].split(".")[0]
         
         # extract audio frames
-        try:
+        visible_folder = f"{output}/{file_name}"
+        create_folder(visible_folder)
+        mel_3cs = []
+        if len(mdist) > 0:
             offset = 0
             duration = (end - start) / frame_num
-            mels = []
             audioclip = AudioFileClip(file_path)
             audioclip.write_audiofile(f"{output}/{file_name}.wav", 44100, 2, 2000, "pcm_s32le")
             for i in range(frame_num):
                 samples,sample_rate = librosa.load(f"{output}/{file_name}.wav", offset=offset, duration=duration)
                 mel = librosa.power_to_db(librosa.feature.melspectrogram(y=samples, sr=sample_rate))
-                mels += [mel]
                 offset += duration
-            os.system(f"rm {output}/{file_name}.wav")
-        except Exception as e:
-            log("No audio found!", e)
-            mels = []
 
-        visible_folder = f"{output}/{file_name}"
-        create_folder(visible_folder)
-        
-        if save_image:
-            for i, face in enumerate(select_faces):
-                cv2.imwrite(f"{visible_folder}/img_{'%05d' % (1+i)}.jpg", face)
-
-        mel_3cs = []
-        if len(mels) > 0:
-            for i, mel in enumerate(mels):
                 fig = plt.figure(figsize=[1,1])
                 ax =fig.add_subplot(111)
                 ax.axes.get_xaxis().set_visible(False)
@@ -174,11 +161,24 @@ def extract(save_image, frame_num, frame_size, output):
                 mel_3c = cv2.imread(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg")
                 mel_3c = cv2.resize(mel_3c, (frame_size, frame_size))
                 mel_3cs += [mel_3c]
+            os.system(f"rm {output}/{file_name}.wav")
+        else:
+            mel_3cs = [np.zeros((frame_size, frame_size, 3)) for _ in range(frame_num)]
+            for i, mel in enumerate(mel_3cs):
+                cv2.imwrite(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg", mel)
+        
+        if save_image:
+            for i, face in enumerate(select_faces):
+                cv2.imwrite(f"{visible_folder}/img_{'%05d' % (1+i)}.jpg", face)
 
         # save input as numpy array
         np.savez_compressed(f"{output}/{file_name}", 
             faces=select_faces, 
-            mel_3cs=mel_3cs, mdist=mdist, latency=latency, conf=conf)
+            mel_3cs=mel_3cs, 
+            mdist=mdist, 
+            latency=latency, 
+            conf=conf
+        )
 
         extraction_queue.task_done()
 
@@ -226,6 +226,11 @@ def work(
 
         file_name = file_path.split("/")[-1].split(".")[0]
 
+        if os.path.isfile(f"{output}/{file_name}.npz"):
+            log(f"skip {file_name}")
+            queue.task_done()
+            continue
+
         try:
             tik = time.time()
             videoclip = VideoFileClip(file_path)
@@ -235,6 +240,7 @@ def work(
             for frame in videoclip.subclip(start, end).iter_frames(fps=25):
                 frames += [frame]
             frames = np.array(frames)
+            log(f"video reading time: {time.time() - tik}")
 
             # make and smooth bboxes
             all_boxes, all_probs = crop_faces(file_path, face_detector, frames, skip_num)
@@ -260,16 +266,21 @@ def work(
             tik = time.time()
 
             # read audio and resample audio
-            audioclip = AudioFileClip(file_path).subclip(start, end)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                audio = audioclip.to_soundarray()[:, 0]
-            audio_rate = int(len(audio)/(end - start))
-            audio = torch.tensor(librosa.resample(
-                audio,
-                audio_rate,
-                resample_rate
-            )).float()
+            try:
+                audioclip = AudioFileClip(file_path).subclip(start, end)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    audio = audioclip.to_soundarray()[:, 0]
+                audio_rate = int(len(audio)/(end - start))
+                audio = torch.tensor(librosa.resample(
+                    audio,
+                    audio_rate,
+                    resample_rate
+                )).float()
+                mdist, offset, conf = compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
+            except Exception as e:
+                log("No audio found!", e)
+                mdist, offset, conf = [], [], []
 
             # save the avi and compute the latency
             if save_avi:
@@ -277,7 +288,7 @@ def work(
                 new_audioclip = CompositeAudioClip([audioclip])
                 videoclip.audio = new_audioclip
                 videoclip.write_videofile(f"{output}/{file_name}.avi", codec="rawvideo")
-            mdist, offset, conf = compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
+            
             log(f"audio processing time: {time.time() - tik}")
             log(f"offset of {file_name}: {offset}")
 
