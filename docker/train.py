@@ -31,7 +31,6 @@ def main(args):
     run = wandb.init(project="deepfake", config=wandb_config)
     
     # set up the data
-    print("args.data_version", args.data_version)
     data_module = DataLoader(
         args.data_version,
         config["root_path"],
