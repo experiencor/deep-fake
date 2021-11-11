@@ -14,6 +14,7 @@ import json
 
 
 def main(args):
+    print(args)
     # read configuration
     config = json.load(open("config.json"))
     set_seed(config["seed"])
