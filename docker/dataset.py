@@ -35,7 +35,7 @@ class Dataset(torch.utils.data.Dataset):
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
-            latency = np.array(list(mdist) + [offset] + [conf])
+            latency = torch.tensor(list(mdist) + [offset] + [conf])
             latency = (latency - torch.mean(latency))/torch.std(latency)
         except Exception as e:
             log(e)
