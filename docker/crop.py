@@ -4,53 +4,40 @@ import matplotlib.pylab as plt
 from multiprocessing import Process, JoinableQueue
 import traceback
 import json
-import mxnet as mx
-from moviepy.video.io import ImageSequenceClip
+import warnings
 import time
 from retinaface.pre_trained_models import get_model
 import numpy as np
+from SyncNetModel import *
+import librosa.display
+import python_speech_features
 from argparse import ArgumentParser
-from utils import log, create_folder
+from utils import log, create_folder, calc_pdist
+from scipy.ndimage.filters import uniform_filter1d
 import time
 import librosa
-import pickle
 import torch
-from moviepy.editor import AudioFileClip, VideoFileClip
+from moviepy.editor import AudioFileClip, VideoFileClip, CompositeAudioClip
+from moviepy.video.io import ImageSequenceClip
 import torch        
 import torchaudio.transforms as T        
-from retinaface.predict_single import Model
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 queue = JoinableQueue()
 extraction_queue = JoinableQueue()
-output_queue = JoinableQueue()
 fail_queue = JoinableQueue()
 
 
-def apply_crop(frame, boxes, probs, margin=0.5):
-    face_idx = np.random.randint(len(boxes))
-    x, y, z, t = boxes[face_idx]
-    x, y, z, t = int(x), int(y), int(z), int(t)
-    width  = x - z
-    height = t - y
-    center_y = int((y + t) / 2)
-    center_x = int((x + z) / 2)
-    size = max(width, height)
-    size = int(size * (1 + margin) / 2)
+def apply_crop(frame, size, y, x, margin=0.4):
+    bs = size
+    bsi = int(bs*(1+2*margin))  # Pad videos by this amount 
 
-    y = max(0, center_y - size)
-    t = center_y + size
-    x = max(0, center_x - size)
-    z = center_x + size
+    frame = np.pad(frame,((bsi,bsi),(bsi,bsi),(0,0)), 'constant', constant_values=(110,110))
+    my  = y+bsi  # BBox center Y
+    mx  = x+bsi  # BBox center X
 
-    noise = int(0.05 * size)
-    y += np.random.randint(-noise, noise+1)
-    t += np.random.randint(-noise, noise+1)
-    x += np.random.randint(-noise, noise+1)
-    z += np.random.randint(-noise, noise+1)
-    y = max(0, y)
-    x = max(0, x)
-    return frame[y:t, x:z, :], probs[face_idx]
+    face = frame[int(my-bs):int(my+bs*(1+2*margin)),int(mx-bs*(1+margin)):int(mx+bs*(1+margin))]
+    return face
 
 
 def crop_faces(file_path, face_detector, frames, skip_num=4, crop_batch_size=8, crop_threshold=0.975):
@@ -88,163 +75,145 @@ def crop_faces(file_path, face_detector, frames, skip_num=4, crop_batch_size=8, 
 
             distance += 1
 
-        return_boxes += [boxes]
-        return_probs += [probs]
+        return_boxes += [boxes[0]]
+        return_probs += [probs[0]]
     return return_boxes, return_probs
 
+def compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15):
+    with torch.no_grad():
+        lastframe = len(faces) - 5
+        faces = np.stack(faces, axis=3)
+        faces = np.expand_dims(faces, axis=0)
+        faces = np.transpose(faces, (0,3,4,1,2))
 
-def extract(extractor_index, freq_num, resample_rate, num_iters):
-    spectrogram = T.Spectrogram(
-        n_fft=2*freq_num-1,
-        hop_length=1024,
-        center=True,
-        pad_mode="reflect",
-        power=2.0,
-    )
-    mel_spectrogram = T.MelSpectrogram(
-        sample_rate=resample_rate,
-        n_fft=2048,
-        center=True,
-        pad_mode="reflect",
-        power=2.0,
-        norm='slaney',
-        onesided=True,
-        n_mels=freq_num,
-        mel_scale="htk",
-    )
-    mfcc_transform = T.MFCC(
-        sample_rate=resample_rate,
-        n_mfcc=freq_num,
-        melkwargs={
-        'n_fft': 2048,
-        'n_mels': freq_num,
-        'mel_scale': 'htk',
-        }
-    )
+        mfcc = zip(*python_speech_features.mfcc(audio, resample_rate))
+        mfcc = np.stack([np.array(i) for i in mfcc])
+        cc = np.expand_dims(np.expand_dims(mfcc, axis=0), axis=0)
+        cct = torch.autograd.Variable(torch.from_numpy(cc.astype(float)).float())
 
+        im_feat = []
+        cc_feat = []
+
+        for i in range(0, lastframe, batch_size):
+            im_batch = [ torch.tensor(faces[:, :, vframe:vframe+5, :, :]) for vframe in range(i, min(lastframe, i+batch_size)) ]
+            im_in = torch.cat(im_batch, 0)
+            im_out  = __S__.forward_lip(im_in.cuda().half())
+            im_feat.append(im_out.data.cpu())
+
+            cc_batch = [ cct[:, :, :, vframe*4:vframe*4+20] for vframe in range(i, min(lastframe, i+batch_size)) ]
+            cc_in = torch.cat(cc_batch, 0)
+            cc_out  = __S__.forward_aud(cc_in.cuda().half())
+            cc_feat.append(cc_out.data.cpu())
+
+        im_feat = torch.cat(im_feat, 0)
+        cc_feat = torch.cat(cc_feat, 0)
+
+        dists = calc_pdist(im_feat, cc_feat, vshift=vshift)
+        mdist = torch.mean(torch.stack(dists, 1), 1).float()
+        
+        minval, minidx = torch.min(mdist, 0)
+        offset = vshift-minidx
+        conf   = torch.median(mdist) - minval
+
+        return mdist, offset, conf
+
+def extract(save_image, frame_num, frame_size, output):
     while True:
-        print(">" * 60, "extraction_queue", extraction_queue.qsize())
+        log(">" * 60, "extraction_queue", extraction_queue.qsize())
         elem = extraction_queue.get()
 
         if elem == None:
             extraction_queue.task_done()
             return
 
-        file_path, index, iteration, save_image, start, end, select_faces, select_probs = elem
-        file_name = file_path.split("/")[-1]
+        file_path, start, end, select_faces, mdist, latency, conf = elem
+        file_name = file_path.split("/")[-1].split(".")[0]
         
-        # print(f"from {extractor_index}, \textracting audio")
+        # extract audio frames
         try:
-            audio = AudioFileClip(file_path).subclip(start, end).to_soundarray()
-            audio = audio[:, 0]
-            audio_rate = int(len(audio)/(end - start))
-            audio = torch.tensor(librosa.resample(
-                audio,
-                audio_rate,
-                resample_rate
-            )).float()
-
-            spec = librosa.power_to_db(spectrogram(audio))     if spectrogram       else None
-            mel  = librosa.power_to_db(mel_spectrogram(audio)) if mel_spectrogram   else None
-            mfcc = librosa.power_to_db(mfcc_transform(audio))  if mfcc_transform    else None
+            offset = 0
+            duration = (end - start) / frame_num
+            mels = []
+            audioclip = AudioFileClip(file_path)
+            audioclip.write_audiofile(f"{output}/{file_name}.wav", 44100, 2, 2000, "pcm_s32le")
+            for i in range(frame_num):
+                samples,sample_rate = librosa.load(f"{output}/{file_name}.wav", offset=offset, duration=duration)
+                mel = librosa.power_to_db(librosa.feature.melspectrogram(y=samples, sr=sample_rate))
+                mel = cv2.resize(mel, (frame_size, frame_size))
+                mels += [mel]
+                offset += duration
+            os.system(f"rm {output}/{file_name}.wav")
         except Exception as e:
             log("No audio found!", e)
-            audio = np.array([])
-            spec, mel, mfcc = [np.array([]) for _ in range(3)]
+            mels = []
 
-        # print(f"from {extractor_index}, \tproducing the mp4")
-        index_to_write = index * (3 * num_iters) + 3 * iteration
-        clip = ImageSequenceClip.ImageSequenceClip(
-            select_faces, 
-            fps=25
-        )
-
-        # print(f"from {extractor_index}, \tadd items to output queue")
-        clip.write_videofile(f"{extractor_index}.mp4", verbose=False)
-        with open(f"{extractor_index}.mp4", "rb") as f:
-            output_queue.put((
-                index_to_write + 0,
-                f.read()
-            ))
-        os.system(f"rm {extractor_index}.mp4")
-
-        output_queue.put((
-            index_to_write + 1,
-            pickle.dumps(mel)
-        ))
-
-        output_queue.put((
-            index_to_write + 2,
-            file_name.encode()
-        ))
-
-        # print(f"from {extractor_index}, \tsaving the data")
+        mel_3cs = []
         if save_image:
-            create_folder("temp")
-            visible_folder = f"temp/{index}_{iteration}/"
+            visible_folder = f"{output}/{file_name}"
             create_folder(visible_folder)
-            for i, (face, prob) in enumerate(zip(select_faces, select_probs)):
-                cv2.imwrite(f"{visible_folder}/{i}_{prob}.png", face)
+            for i, face in enumerate(select_faces):
+                cv2.imwrite(f"{visible_folder}/img_{'%05d' % (1+i)}.jpg", face)
 
-            if spec is not None:
-                plt.imsave(f"{visible_folder}/spec.png", spec)
+            if len(mels) > 0:
+                for i, mel in enumerate(mels):
+                    fig = plt.figure(figsize=[1,1])
+                    ax =fig.add_subplot(111)
+                    ax.axes.get_xaxis().set_visible(False)
+                    ax.axes.get_yaxis().set_visible(False)
+                    ax.set_frame_on(False)
 
-            if mel is not None:
-                plt.imsave(f"{visible_folder}/mel.png", mel)
+                    librosa.display.specshow(mel)
 
-            if mfcc is not None:
-                plt.imsave(f"{visible_folder}/mfcc.png", mfcc)
+                    plt.savefig(
+                        f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg", 
+                        dpi=1000, 
+                        bbox_inches="tight",
+                        pad_inches=0
+                    )
+                    plt.close('all')
+
+                    mel_3cs += [cv2.imread(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg")]
+
+        # save input as numpy array
+        np.savez_compressed(f"{output}/{file_name}", select_faces, mel_3cs, mdist, latency, conf)
 
         extraction_queue.task_done()
-        # print(f"from {extractor_index}, \tcompleted")
-
-
-def output(output_file):
-    records = mx.recordio.MXIndexedRecordIO(
-        f'{output_file}.idx', f'{output_file}.rec', 'w'
-    )
-
-    while True:
-        print(">" * 60, "output_queue", output_queue.qsize())
-        elem = output_queue.get()
-
-        if elem == None:
-            records.close()
-            output_queue.task_done()
-            return
-
-        index, data = elem
-        records.write_idx(
-            index, 
-            data
-        )
-        output_queue.task_done()
-
 
 def work(
-    save_image,
-    num_iters, 
+    save_avi,
+    resample_rate,
     device, 
     max_clip_len,
     skip_num,
-    video_size
+    frame_size, 
+    frame_num,
+    start_time,
+    video_num,
+    output
 ):    
     try:
         face_detector = get_model(
             model_name="resnet50_2020-07-20",
             max_size=2048, 
             device=device
-        )        
+        )
         face_detector.eval()
+
+        __S__ = S(num_layers_in_fc_layers = 1024).cuda().half().eval()
+        loaded_state = torch.load("syncnet_v2.model", map_location=lambda storage, loc: storage)
+        state = __S__.state_dict()
+        for name, param in loaded_state.items():
+            state[name].copy_(param)
     except Exception as e:
         log(e)
         return
 
     while True:
-        print(">" * 60, "queue", queue.qsize())
-        elem = queue.get()
+        log(">" * 60, f"file_path queue: {queue.qsize()}, "
+            f"average crop time: {round((time.time() - start_time) / (video_num - queue.qsize() + 1e-3), 2)}")
+        file_path = queue.get()
         
-        if elem is None:
+        if file_path is None:
             queue.task_done()
             return
 
@@ -252,46 +221,80 @@ def work(
             queue.task_done()
             continue
 
-        index, file_path = elem
+        file_name = file_path.split("/")[-1].split(".")[0]
 
         try:
+            tik = time.time()
             videoclip = VideoFileClip(file_path)
-            duration = videoclip.duration
+            start, end = 0, min(max_clip_len, videoclip.duration)
 
-            for iteration in range(num_iters):
-                start = max(0, duration-max_clip_len) * np.random.rand()
-                end = min(start + max_clip_len, duration)
+            frames = []
+            for frame in videoclip.subclip(start, end).iter_frames(fps=25):
+                frames += [frame]
+            frames = np.array(frames)
 
-                frames = []
-                for frame in videoclip.subclip(start, end).iter_frames():
-                    frames += [frame]
+            # make and smooth bboxes
+            all_boxes, all_probs = crop_faces(file_path, face_detector, frames, skip_num)
 
-                indices = list(range(len(frames)))
-                np.random.shuffle(indices)
-                indices = indices[:96]
-                frames = [frames[i] for i in sorted(indices)]
-                frames = np.array(frames)
+            all_sizes = [max((box[3]-box[1]), (box[2]-box[0]))/2 for box in all_boxes]
+            all_ys = [(box[1]+box[3])/2 for box in all_boxes]
+            all_xs = [(box[0]+box[2])/2 for box in all_boxes]
 
-                all_boxes, all_probs = crop_faces(file_path, face_detector, frames, skip_num)
-                select_faces, select_probs = [], []
-                for frame, boxes, probs in zip(frames, all_boxes, all_probs):
-                    face, prob = apply_crop(frame, boxes, probs)
-                    select_faces += [cv2.resize(face, (video_size, video_size))]
-                    select_probs += [prob]
+            all_ys = [y + np.random.randint(-y*0.015, y*0.015+1) for y in all_ys]
+            all_xs = [x + np.random.randint(-x*0.015, x*0.015+1) for x in all_xs]
+            
+            all_sizes = uniform_filter1d(all_sizes, size=13)
+            all_ys = uniform_filter1d(all_ys, size=13)
+            all_xs = uniform_filter1d(all_xs, size=13)
 
-                extraction_queue.put((
-                    file_path, 
-                    index, 
-                    iteration, 
-                    save_image, 
-                    start, 
-                    end, 
-                    select_faces, 
-                    select_probs
-                ))
+            # apply the bboxes to the frames
+            faces, probs = [], []
+            for frame, size, y, x, prob in zip(frames, all_sizes, all_ys, all_xs, all_probs):
+                face = apply_crop(frame, size, y, x)
+                faces += [cv2.resize(face, (frame_size, frame_size))[:,:,::-1]]
+                probs += [prob]
+            log(f"video processing time: {time.time() - tik}")
+            tik = time.time()
+
+            # read audio and resample audio
+            audioclip = AudioFileClip(file_path).subclip(start, end)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                audio = audioclip.to_soundarray()[:, 0]
+            audio_rate = int(len(audio)/(end - start))
+            audio = torch.tensor(librosa.resample(
+                audio,
+                audio_rate,
+                resample_rate
+            )).float()
+
+            # save the avi and compute the latency
+            if save_avi:
+                videoclip = ImageSequenceClip.ImageSequenceClip(faces, fps=25)
+                new_audioclip = CompositeAudioClip([audioclip])
+                videoclip.audio = new_audioclip
+                videoclip.write_videofile(f"{output}/{file_name}.avi", codec="rawvideo")
+            mdist, offset, conf = compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
+            log(f"audio processing time: {time.time() - tik}")
+            log(f"offset of {file_name}: {offset}")
+
+            # uniform sampling of frames
+            step = len(faces)//frame_num
+            indices = [i * step for i in range(frame_num)]
+            select_faces = [faces[i] for i in indices]
+
+            extraction_queue.put((
+                file_path,
+                start,
+                end, 
+                select_faces, 
+                mdist,
+                offset,
+                conf
+            ))
         except Exception as e:
             queue.put(file_path)
-            fail_queue.put((index, file_path))
+            fail_queue.put((file_path))
             log("=" * 20)
             log(e)
             log(f"number of failed videos: {fail_queue.qsize()}")
@@ -304,73 +307,66 @@ def main(args):
     config = json.load(open("config.json"))
     create_folder(args.output)
 
-    index = 0
     files = [f for f in sorted(os.listdir(args.input)) if f.endswith(".mp4")]
     for f in files:
-        queue.put((index, f"{args.input}/{f}"))
-        index += 1
+        queue.put(f"{args.input}/{f}")
 
-    # start the workers
+    # start the face detectors
     workers = []
-    for _ in range(args.num_workers):
-        worker = Process(target=work, args=(
-            args.save_image,
-            config['num_samples_per_video'],
+    for _ in range(args.workers):
+        worker = Process(target=work, args=(     
+            args.save_avi,       
+            config['resample_rate'],
             config['device'],
             config['max_clip_len'],
             config['face_detection_step'],
-            config['video_size'],
+            config['frame_size'],
+            config['frame_num'],
+            tik,
+            len(files),
+            args.output, 
         ))
         worker.start()
         workers.append(worker)
 
+    # start the audio processors
     extractors = []
-    for i in range(args.num_workers):
+    for i in range(args.workers):
         extractor = Process(target=extract, args=(
-            i,
-            config['freq_num'],
-            config['resample_rate'],
-            config['num_samples_per_video'],            
+            args.save_image,            
+            config['frame_num'],
+            config['frame_size'],
+            args.output,            
         ))
         extractor.start()
         extractors += [extractor]
 
-    outputer = Process(target=output, args=(
-        args.output,
-    ))
-    outputer.start()
-
-    # wait for the queue to be empty
+    # wait for the queues to be empty
     queue.join()
     extraction_queue.join()
-    output_queue.join()
 
-    # put None stop the workers
-    for _ in range(args.num_workers):
+    # put Nones tp stop the processes
+    for _ in range(args.workers):
         queue.put(None)
-
-    for _ in range(args.num_workers):
+    for _ in range(args.workers):
         extraction_queue.put(None)
-
-    output_queue.put(None)
 
     # wait for the workers to finish
     for worker in workers:
         worker.join()
-
     for extractor in extractors:
         extractor.join()
 
-    outputer.join()
-    log(f'average crop time: {(time.time() - tik)/index}')
+    log(f'average crop time: {(time.time() - tik) / len(files)}')
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("--num-workers",    type=int,   required=True, help="Number of workers")
-    parser.add_argument("--input",          type=str,   required=True, help="Input directory of raw videos")
-    parser.add_argument("--output",         type=str,   required=True, help="Output file of face and audio")
-    parser.add_argument("--save-image",     action='store_true')
+    parser.add_argument("--workers",    type=int,   required=True, help="Number of workers")
+    parser.add_argument("--input",      type=str,   required=True, help="Input directory of raw videos")
+    parser.add_argument("--output",     type=str,   required=True, help="Output directory")
+    parser.add_argument("--save-image", action='store_true')
+    parser.add_argument("--save-avi",   action='store_true')
 
     args = parser.parse_args()
     main(args)

@@ -12,7 +12,6 @@ import torch.nn.functional as F
 from pytorchvideo.transforms import (
     ApplyTransformToKey,
     Normalize,
-    UniformTemporalSubsample,
 )
 from torchvision.transforms import (
     Compose,
@@ -22,12 +21,20 @@ import cv2
 import math
 import PIL
 import albumentations as A
-import torchvision
+import torch
 import augly.image as imaugs
 
 config = json.load(open("config.json"))
-image_size = config["video_size"]
+image_size = config["frame_size"]
 
+
+def calc_pdist(feat1, feat2, vshift=10):
+    win_size = vshift*2+1
+    feat2p = torch.nn.functional.pad(feat2,(0,0,vshift,vshift))
+    dists = []
+    for i in range(0,len(feat1)):
+        dists.append(torch.nn.functional.pairwise_distance(feat1[[i],:].repeat(win_size, 1), feat2p[i:i+win_size,:]))
+    return dists
 
 def bgr2ycbcr(img_bgr):
     img_bgr = img_bgr.astype(np.float32)
@@ -142,7 +149,6 @@ transform = ApplyTransformToKey(
     key="video",
     transform=Compose(
         [
-            UniformTemporalSubsample(config["video_len"]),
             Lambda(lambda x: x / 255.0),
             Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ]
@@ -154,7 +160,7 @@ def log(*args):
     logging.warning(print_mess + "\n\n")
 
 def create_folder(path):
-    if not os.path.exists(path):
+    if not os.path.isdir(path):
         os.mkdir(path)
 
 def calc_prob(logits):

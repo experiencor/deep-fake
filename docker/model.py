@@ -34,7 +34,7 @@ class Model(LightningModule):
         wandb.log(metrics, step=self.global_step)
 
     def forward(self, batch):
-        return self.model(batch["video"], batch["audio"])
+        return self.model(batch["video"])
 
     def training_step(self, batch, _):
         opt = self.optimizers()
