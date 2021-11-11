@@ -21,7 +21,7 @@ class Model(LightningModule):
         self.model = TimeSformer(
             img_size=224, 
             num_classes=2, 
-            num_frames=16, 
+            num_frames=32, 
             attention_type='divided_space_time',  
         )
 
