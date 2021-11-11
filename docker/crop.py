@@ -139,7 +139,6 @@ def extract(save_image, frame_num, frame_size, output):
             for i in range(frame_num):
                 samples,sample_rate = librosa.load(f"{output}/{file_name}.wav", offset=offset, duration=duration)
                 mel = librosa.power_to_db(librosa.feature.melspectrogram(y=samples, sr=sample_rate))
-                mel = cv2.resize(mel, (frame_size, frame_size))
                 mels += [mel]
                 offset += duration
             os.system(f"rm {output}/{file_name}.wav")
@@ -147,7 +146,6 @@ def extract(save_image, frame_num, frame_size, output):
             log("No audio found!", e)
             mels = []
 
-        mel_3cs = []
         visible_folder = f"{output}/{file_name}"
         create_folder(visible_folder)
         
@@ -155,6 +153,7 @@ def extract(save_image, frame_num, frame_size, output):
             for i, face in enumerate(select_faces):
                 cv2.imwrite(f"{visible_folder}/img_{'%05d' % (1+i)}.jpg", face)
 
+        mel_3cs = []
         if len(mels) > 0:
             for i, mel in enumerate(mels):
                 fig = plt.figure(figsize=[1,1])
@@ -172,7 +171,9 @@ def extract(save_image, frame_num, frame_size, output):
                 )
                 plt.close('all')
 
-                mel_3cs += [cv2.imread(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg")]
+                mel_3c = cv2.imread(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg")
+                mel_3c = cv2.resize(mel_3c, (frame_size, frame_size))
+                mel_3cs += [mel_3c]
 
         # save input as numpy array
         np.savez_compressed(f"{output}/{file_name}", 
