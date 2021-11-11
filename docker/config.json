@@ -11,5 +11,5 @@
     "train_batch_size": 8,
     "submit_batch_size": 1,
     "root_path": "/data/projects/deepfake",
-    "epoch": 2
+    "epoch": 32
 }
