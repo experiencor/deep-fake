@@ -12,9 +12,11 @@ class Dataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data_frame,
+        transform
         augmentation = None,
     ) -> None:
         self._data_frame = data_frame
+        self._transform = transform
         self._augmentation = augmentation
         
     def __len__(self):
@@ -28,8 +30,7 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             metadata = np.load(f"{filepath}/{filename}.npz")
-            print(list(metadata.keys()))
-            frames = metadata["select_faces"] + metadata["mel_3"]
+            frames = metadata["faces"] + metadata["mel_3"]
 
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
@@ -41,7 +42,7 @@ class Dataset(torch.utils.data.Dataset):
             "video": torch.permute(torch.tensor(frames), (3, 0, 1, 2)),
             "label": label,
             "video_index": video_index,
-            "file_path": file_path
+            "file_path": filename
         }
 
         return sample_dict

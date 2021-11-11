@@ -175,7 +175,9 @@ def extract(save_image, frame_num, frame_size, output):
                     mel_3cs += [cv2.imread(f"{visible_folder}/img_{'%05d' % (1+i+frame_num)}.jpg")]
 
         # save input as numpy array
-        np.savez_compressed(f"{output}/{file_name}", select_faces, mel_3cs, mdist, latency, conf)
+        np.savez_compressed(f"{output}/{file_name}", 
+            faces=select_faces, 
+            mel_3cs=mel_3cs, mdist=mdist, latency=latency, conf=conf)
 
         extraction_queue.task_done()
 
