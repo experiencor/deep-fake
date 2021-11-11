@@ -26,7 +26,6 @@ class DataLoader(pytorch_lightning.LightningDataModule):
         self.val_dataset = Dataset(
             data_frame=dev_data,
             transform=transform,
-            augmentation=train_aug,
         )
         self.test_dataset = Dataset(
             data_frame=test_data,
