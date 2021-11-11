@@ -149,9 +149,9 @@ transform = ApplyTransformToKey(
     key="video",
     transform=Compose(
         [
-            #Lambda(lambda x: x / 255.0),
-            #Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
-            Normalize((127.5, 127.5, 127.5), (127.5, 127.5, 127.5)),
+            Lambda(lambda x: x / 255.0),
+            Normalize((0.45, 0.45, 0.45), (0.225, 0.225, 0.225)),
+            #Normalize((127.5, 127.5, 127.5), (127.5, 127.5, 127.5)),
         ]
     ),
 )
