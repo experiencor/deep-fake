@@ -48,8 +48,8 @@ class Dataset(torch.utils.data.Dataset):
             if self._augmentation is not None:
                 faces = np.array([self._augmentation(image = face)["image"] for face in faces])
             frames = np.concatenate([faces, metadata["mel_3cs"]], axis=0)
-            #for i, frame in enumerate(frames):
-            #    cv2.imwrite(f"/data/temp/{i}.png", frame)
+            for i, frame in enumerate(frames):
+                cv2.imwrite(f"/data/temp/{i}.png", frame)
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
             latency = torch.tensor(np.array(list(mdist) + [offset] + [conf]))
             latency = (latency - latency_mean)/latency_std
