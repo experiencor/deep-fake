@@ -129,7 +129,7 @@ class Model(LightningModule):
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, 
             mode="max",
-            patience=300,
+            patience=8,
             cooldown=1,
             factor=0.3,
             verbose=True
