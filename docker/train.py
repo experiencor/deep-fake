@@ -45,7 +45,7 @@ def main(args):
     )
 
     # load the pretrain weight
-    pretrain = torch.load(f"{config['weight_path']}/pretrain/{args.pret_version}/model.ckpt")
+    pretrain = torch.load(f"{config['root_path']}/pretrain/{args.pret_version}/model.ckpt")
     if "state_dict" in pretrain:
         pretrain = pretrain["state_dict"]
     missing_keys, unexpected_keys = model.load_state_dict(pretrain)
