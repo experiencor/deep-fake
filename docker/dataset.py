@@ -28,7 +28,7 @@ class Dataset(torch.utils.data.Dataset):
         
         try:
             metadata = np.load(f"{filepath}/{filename}.npz")
-            frames = metadata["faces"] + metadata["mel_3"]
+            frames = metadata["select_faces"] + metadata["mel_3"]
 
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
