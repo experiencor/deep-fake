@@ -7,6 +7,19 @@ import torchaudio.transforms as T
 from utils import log
 import torch.utils.data
 
+latency_mean = [13.19363815, 13.19501656, 13.18659362, 13.17640294, 13.17066425, 13.17019671, 13.17482536, 
+                13.17799065, 13.18566418, 13.20933517, 13.25752388, 13.28976352, 13.20823131, 12.90568457, 
+                12.38983396, 11.89045171, 11.7443412 , 12.03197746, 12.4989344 , 12.87843759, 13.07726926, 
+                13.13755761, 13.14001962, 13.13205015, 13.12779171, 13.12155903, 13.11000457, 13.1013639 , 
+                13.10253977, 13.10916571, 13.10936431, -0.66052139,  2.08751058]
+latency_std  = [1.22018219, 1.21550165, 1.21229337, 1.20948145, 1.21118108,
+                1.22301931, 1.23717952, 1.24618324, 1.24850914, 1.25898727,
+                1.29470179, 1.34988986, 1.4100049 , 1.47685704, 1.56634314,
+                1.62855303, 1.59250148, 1.54371076, 1.53380911, 1.47927914,
+                1.39061644, 1.31827097, 1.26728097, 1.2379907 , 1.22404027,
+                1.21914667, 1.21814202, 1.21650715, 1.21238232, 1.20961766,
+                1.21228655, 4.35032996, 1.24566509]
+
 
 class Dataset(torch.utils.data.Dataset):
     def __init__(
@@ -36,7 +49,7 @@ class Dataset(torch.utils.data.Dataset):
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
             latency = torch.tensor(np.array(list(mdist) + [offset] + [conf]))
-            latency = (latency - torch.mean(latency))/torch.std(latency)
+            latency = (latency - latency_mean)/latency_std
         except Exception as e:
             log(e)
             traceback.print_exc()
