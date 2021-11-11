@@ -48,6 +48,7 @@ class Dataset(torch.utils.data.Dataset):
             if self._augmentation is not None:
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
             for i, frame in enumerate(frames):
+                print(i)
                 cv2.imwrite(f"/data/temp/{i}.png", frame)
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
             latency = torch.tensor(np.array(list(mdist) + [offset] + [conf]))
