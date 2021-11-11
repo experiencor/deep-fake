@@ -53,6 +53,7 @@ class Dataset(torch.utils.data.Dataset):
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
             latency = torch.tensor(np.array(list(mdist) + [offset] + [conf]))
             latency = (latency - latency_mean)/latency_std
+            print(latency)
         except Exception as e:
             log(e)
             traceback.print_exc()
