@@ -11,12 +11,9 @@ from dataset import Dataset
 class DataLoader(pytorch_lightning.LightningDataModule):
     def __init__(self, data_version, root_path, batch_size):
         super().__init__()
-        self.video_path = f"{root_path}/data/{data_version}"
+        self.video_path = f"{root_path}/data/{data_version}.csv"
 
-        splits = pd.read_csv("splits.csv")
-        all_files = set(os.listdir(f"{self.video_path}/0"))
-        splits = splits[splits.filename.isin(all_files)].copy()
-
+        splits = pd.read_csv(self.video_path)
         self.train_data = splits[splits.split == "train"].copy()
         dev_data = splits[splits.split == "dev"].copy()
         test_data = splits[splits.split == "test"].copy()
