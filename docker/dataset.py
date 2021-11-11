@@ -36,7 +36,7 @@ class Dataset(torch.utils.data.Dataset):
                 frames = np.array([self._augmentation(image = frame)["image"] for frame in frames])
             mdist, offset, conf = metadata["mdist"], metadata["latency"], metadata["conf"]
             print(mdist, offset, conf)
-            latency = np.concatenate(mdist, offset, conf)
+            latency = np.array(list(mdist) + [offset] + [conf])
         except Exception as e:
             log(e)
             traceback.print_exc()
