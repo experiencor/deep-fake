@@ -12,7 +12,7 @@ class Dataset(torch.utils.data.Dataset):
     def __init__(
         self,
         data_frame,
-        transform
+        transform,
         augmentation = None,
     ) -> None:
         self._data_frame = data_frame
