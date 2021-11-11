@@ -44,5 +44,5 @@ class Dataset(torch.utils.data.Dataset):
             "video_index": video_index,
             "file_path": filename
         }
-
+        sample_dict = self._transform(sample_dict)
         return sample_dict
