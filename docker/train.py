@@ -93,7 +93,7 @@ def main(args):
     
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='')
     parser.add_argument('--data-version', type=str)
     parser.add_argument('--code-version', type=str)
     parser.add_argument('--pret-version', type=str)
