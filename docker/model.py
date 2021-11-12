@@ -24,7 +24,7 @@ class Model(LightningModule):
         self.model.init_weights("vit_base_patch16_224.pth")
 
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(128 + 33, 64),
+            nn.Linear(768, 64),
             nn.ReLU(),
             nn.Linear(64, 2),
         )
@@ -40,7 +40,7 @@ class Model(LightningModule):
     def forward(self, batch):
         audio_video = self.model(batch["video"])
         #concat_input = torch.cat([audio_video, batch["latency"]], dim=1)
-        #logits = self.linear_relu_stack(concat_input)
+        logits = self.linear_relu_stack(audio_video)
         return audio_video
 
     def training_step(self, batch, _):
