@@ -31,7 +31,7 @@ class Model(LightningModule):
         self.linear_relu_stack1 = nn.Sequential(
             nn.Linear(33, 16),
             nn.LeakyReLU(),
-            nn.Linear(18, 8),
+            nn.Linear(16, 8),
         )
 
         self.best_auc = 0
