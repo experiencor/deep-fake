@@ -4,7 +4,7 @@ import torch.utils.data
 import torch
 import pandas as pd
 import time
-from utils import log, transform, predict
+from utils import log, transform, predict, create_folder
 from sklearn import metrics
 import pandas as pd
 from argparse import ArgumentParser
@@ -23,20 +23,20 @@ def main(input_dir, output_file):
     test_videos = [video for video in sorted(os.listdir(input_dir)) if ".mp4" in video]
     test_data = pd.DataFrame({
         "filename": test_videos,
+        "filepath": [input_dir] * len(test_videos),
         "label": [1] * len(test_videos)
     })
-    test_data["row_index"] = test_data.index
-    test_data["source"] = "challenge"
     test_data.to_csv("test.csv", index=False)    
 
-    # crop the faces from the videos    
+    # crop the faces from the videos 
     log("cropping videos")
+    create_folder("metadata")   
     tik = time.time()
     os.system(
         f"python crop.py "
         f"--num-workers {2} "
         f"--input {input_dir} "
-        f"--output challenge "
+        f"--output metadata "
     )
     avg_crop_time = (time.time() - tik) / len(test_videos)
     log(f'Face cropping completed! Average crop time: {avg_crop_time} for {len(test_videos)} videos.')
@@ -63,35 +63,23 @@ def main(input_dir, output_file):
     )
 
     # perform predictions
-    final_probs = []
-    for iteration in range(config["num_samples_per_video"]):
-        test_dataset = Dataset(
-            pd.read_csv("test.csv"),
-            iteration,
-            config["video_len"],
-            config["video_size"],
-            config["audio_len"],
-            config["audio_size"],
-            config["resample_rate"],
-            config["num_samples_per_video"],
-            config["freq_num"],
-            transform,
-        )
+    test_dataset = Dataset(
+        pd.read_csv("test.csv"),
+        transform,
+    )
 
-        test_dataloader = torch.utils.data.DataLoader(
-            test_dataset,
-            batch_size=config["submit_batch_size"],
-            sampler=torch.utils.data.SequentialSampler(test_dataset),
-            num_workers=0,
-        )
+    test_dataloader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=config["submit_batch_size"],
+        sampler=torch.utils.data.SequentialSampler(test_dataset),
+        num_workers=0,
+    )
 
-        probs = predict(trainer, model, test_dataloader)
-        probs = np.array([res["prob"] for res in probs])
-        final_probs += [probs]
-    final_probs = np.mean(np.stack(final_probs), axis=0)
+    probs = predict(trainer, model, test_dataloader)
+    probs = np.array([res["prob"] for res in probs])
 
     # create output and write the ouput as csv
-    result = pd.DataFrame({"filename": test_videos, "probability": final_probs})
+    result = pd.DataFrame({"filename": test_videos, "probability": probs})
 
     label_file = f"{input_dir}/label.csv"
     if os.path.exists(label_file):

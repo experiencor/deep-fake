@@ -121,7 +121,6 @@ class Model(LightningModule):
             })
         self.log("test/auc", auc, sync_dist=True)
 
-
     def predict_step(self, batch, _):
         return self.forward(batch)
         
