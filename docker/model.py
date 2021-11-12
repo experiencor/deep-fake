@@ -21,7 +21,7 @@ class Model(LightningModule):
         self.model = TimeSformer(
             32, 224, 16, embed_dims=768, attention_type='divided_space_time'
         )
-        self.mode.init_weights("vit_base_patch16_224.pth")
+        self.model.init_weights("vit_base_patch16_224.pth")
 
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(128 + 33, 64),
