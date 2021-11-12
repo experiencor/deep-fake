@@ -23,7 +23,7 @@ def main(input_dir, output_file):
     test_videos = [video for video in sorted(os.listdir(input_dir)) if ".mp4" in video]
     test_data = pd.DataFrame({
         "filename": test_videos,
-        "filepath": [input_dir] * len(test_videos),
+        "filepath": ["metadata"] * len(test_videos),
         "label": [1] * len(test_videos)
     })
     test_data.to_csv("test.csv", index=False)    
@@ -34,7 +34,7 @@ def main(input_dir, output_file):
     tik = time.time()
     os.system(
         f"python crop.py "
-        f"--num-workers {2} "
+        f"--workers {2} "
         f"--input {input_dir} "
         f"--output metadata "
     )

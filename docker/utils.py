@@ -176,7 +176,7 @@ def set_seed(seed: int):
 
 def predict(trainer, model, dataloader):
     logits = trainer.predict(model, dataloader)
-    logits = torch.cat(logits)
+    logits = torch.cat(logits).float()
     probs  = calc_prob(logits).cpu().detach().numpy()
     predictions = [{"filename": filename, "prob": prob} \
         for prob, filename in zip(probs, dataloader.dataset._data_frame["filename"])]
