@@ -37,6 +37,7 @@ class Model(LightningModule):
 
     def forward(self, batch):
         audio_video = self.model(batch["video"])
+        print(batch["video"])
         #concat_input = torch.cat([audio_video, batch["latency"]], dim=1)
         logits = self.linear_relu_stack(audio_video)
         return logits
@@ -47,7 +48,6 @@ class Model(LightningModule):
         lr = [group['lr'] for group in opt.param_groups][0]
         
         logits = self.forward(batch)
-        print(logits, batch["label"])
         loss = F.cross_entropy(logits, batch["label"])
 
         mean_loss = torch.mean(self.all_gather(loss))
