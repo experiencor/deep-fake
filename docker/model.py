@@ -22,10 +22,16 @@ class Model(LightningModule):
             32, 224, 16, embed_dims=768, attention_type='divided_space_time'
         )
 
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(768 + 33, 2),
+        self.linear_relu_stack2 = nn.Sequential(
+            nn.Linear(768 + 8, 2),
             #nn.ReLU(),
             #nn.Linear(128, 2),
+        )
+
+        self.linear_relu_stack1 = nn.Sequential(
+            nn.Linear(33, 16),
+            nn.LeakyReLU(),
+            nn.Linear(18, 8),
         )
 
         self.best_auc = 0
@@ -38,8 +44,11 @@ class Model(LightningModule):
 
     def forward(self, batch):
         audio_video = self.model(batch["video"])
-        concat_input = torch.cat([audio_video, batch["latency"]], dim=1)
-        logits = self.linear_relu_stack(concat_input)
+        concat_input = torch.cat([
+            audio_video,
+            self.linear_relu_stack1(batch["latency"]),
+        ], dim=1)
+        logits = self.linear_relu_stack2(concat_input)
         return logits
 
     def training_step(self, batch, _):
