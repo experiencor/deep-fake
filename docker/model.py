@@ -19,11 +19,9 @@ class Model(LightningModule):
     def __init__(self, total_steps, lr):
         super().__init__()
         self.model = TimeSformer(
-            img_size=224, 
-            num_classes=2, 
-            num_frames=32, 
-            attention_type='divided_space_time',  
+            32, 224, 16, embed_dims=768, attention_type='divided_space_time'
         )
+        self.mode.init_weights("vit_base_patch16_224.pth")
 
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(128 + 33, 64),
