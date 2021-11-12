@@ -24,7 +24,9 @@ class Model(LightningModule):
         self.model.init_weights("vit_base_patch16_224.pth")
 
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(768, 2)
+            nn.Linear(768 + 33, 128),
+            nn.ReLU,
+            nn.Linear(128, 2),
         )
 
         self.best_auc = 0
@@ -125,7 +127,7 @@ class Model(LightningModule):
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, 
             mode="max",
-            patience=8,
+            patience=3,
             cooldown=1,
             factor=0.3,
             verbose=True
