@@ -25,7 +25,7 @@ class Model(LightningModule):
 
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(768 + 33, 128),
-            nn.ReLU,
+            nn.ReLU(),
             nn.Linear(128, 2),
         )
 
