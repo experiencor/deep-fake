@@ -5,11 +5,11 @@
     "frame_size": 224,
     "freq_num": 128,
     "resample_rate": 16000,
-    "lr": 5e-3,
+    "lr": 1e-3,
     "seed": 100,
     "device": "cuda",
     "train_batch_size": 4,
     "submit_batch_size": 1,
     "root_path": "/data/projects/deepfake",
-    "epoch": 128
+    "epoch": 32
 }
