@@ -117,13 +117,7 @@ def compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
 
         return mdist, offset, conf
 
-def extract(save_image, save_avi, frame_num, frame_size, output):
-    __S__ = S(num_layers_in_fc_layers = 1024).cuda().half().eval()
-    loaded_state = torch.load("syncnet_v2.model", map_location=lambda storage, loc: storage)
-    state = __S__.state_dict()
-    for name, param in loaded_state.items():
-        state[name].copy_(param)
-
+def extract(save_image, frame_num, frame_size, output):
     while True:
         log(">" * 60, "extraction_queue", extraction_queue.qsize())
         elem = extraction_queue.get()
@@ -132,41 +126,8 @@ def extract(save_image, save_avi, frame_num, frame_size, output):
             extraction_queue.task_done()
             return
 
-        file_path, start, end, faces, resample_rate = elem
+        file_path, start, end, select_faces, mdist, latency, conf = elem
         file_name = file_path.split("/")[-1].split(".")[0]
-
-        # read audio and resample audio
-        tik = time.time()
-        try:
-            audioclip = AudioFileClip(file_path).subclip(start, end)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                audio = audioclip.to_soundarray()[:, 0]
-            audio_rate = int(len(audio)/(end - start))
-            audio = torch.tensor(librosa.resample(
-                audio,
-                audio_rate,
-                resample_rate
-            )).float()
-            mdist, offset, conf = compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
-        except Exception as e:
-            log("No audio found!", e)
-            mdist, offset, conf = [], [], []
-
-        # save the avi and compute the latency
-        if save_avi:
-            videoclip = ImageSequenceClip.ImageSequenceClip(faces, fps=25)
-            new_audioclip = CompositeAudioClip([audioclip])
-            videoclip.audio = new_audioclip
-            videoclip.write_videofile(f"{output}/{file_name}.avi", codec="rawvideo")
-        
-        log(f"audio processing time: {time.time() - tik}")
-        log(f"offset of {file_name}: {offset}")
-
-        # uniform sampling of frames
-        step = len(faces)//frame_num
-        indices = [i * step for i in range(frame_num)]
-        select_faces = [faces[i] for i in indices]
         
         # extract audio frames
         visible_folder = f"{output}/{file_name}"
@@ -215,18 +176,20 @@ def extract(save_image, save_avi, frame_num, frame_size, output):
             faces=select_faces, 
             mel_3cs=mel_3cs, 
             mdist=mdist, 
-            latency=offset, 
+            latency=latency, 
             conf=conf
         )
 
         extraction_queue.task_done()
 
 def work(
+    save_avi,
     resample_rate,
     device, 
     max_clip_len,
     skip_num,
     frame_size, 
+    frame_num,
     start_time,
     video_num,
     output
@@ -238,6 +201,12 @@ def work(
             device=device
         )
         face_detector.eval()
+
+        __S__ = S(num_layers_in_fc_layers = 1024).cuda().half().eval()
+        loaded_state = torch.load("syncnet_v2.model", map_location=lambda storage, loc: storage)
+        state = __S__.state_dict()
+        for name, param in loaded_state.items():
+            state[name].copy_(param)
     except Exception as e:
         log(e)
         return
@@ -294,14 +263,48 @@ def work(
                 faces += [cv2.resize(face, (frame_size, frame_size))[:,:,::-1]]
                 probs += [prob]
             log(f"video processing time: {time.time() - tik}")
-            tik = time.time()            
+            tik = time.time()
+
+            # read audio and resample audio
+            try:
+                audioclip = AudioFileClip(file_path).subclip(start, end)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    audio = audioclip.to_soundarray()[:, 0]
+                audio_rate = int(len(audio)/(end - start))
+                audio = torch.tensor(librosa.resample(
+                    audio,
+                    audio_rate,
+                    resample_rate
+                )).float()
+                mdist, offset, conf = compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
+            except Exception as e:
+                log("No audio found!", e)
+                mdist, offset, conf = [], [], []
+
+            # save the avi and compute the latency
+            if save_avi:
+                videoclip = ImageSequenceClip.ImageSequenceClip(faces, fps=25)
+                new_audioclip = CompositeAudioClip([audioclip])
+                videoclip.audio = new_audioclip
+                videoclip.write_videofile(f"{output}/{file_name}.avi", codec="rawvideo")
+            
+            log(f"audio processing time: {time.time() - tik}")
+            log(f"offset of {file_name}: {offset}")
+
+            # uniform sampling of frames
+            step = len(faces)//frame_num
+            indices = [i * step for i in range(frame_num)]
+            select_faces = [faces[i] for i in indices]
 
             extraction_queue.put((
                 file_path,
                 start,
                 end, 
-                faces,
-                resample_rate
+                select_faces, 
+                mdist,
+                offset,
+                conf
             ))
         except Exception as e:
             queue.put(file_path)
@@ -326,11 +329,13 @@ def main(args):
     workers = []
     for _ in range(args.workers):
         worker = Process(target=work, args=(     
+            args.save_avi,       
             config['resample_rate'],
             config['device'],
             config['max_clip_len'],
             config['face_detection_step'],
             config['frame_size'],
+            config['frame_num'],
             tik,
             len(files),
             args.output, 
@@ -342,8 +347,7 @@ def main(args):
     extractors = []
     for i in range(args.workers):
         extractor = Process(target=extract, args=(
-            args.save_image,          
-            args.save_avi,  
+            args.save_image,            
             config['frame_num'],
             config['frame_size'],
             args.output,            
