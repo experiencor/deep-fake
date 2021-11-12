@@ -24,9 +24,7 @@ class Model(LightningModule):
         self.model.init_weights("vit_base_patch16_224.pth")
 
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(768, 64),
-            nn.ReLU(),
-            nn.Linear(64, 2),
+            nn.Linear(768, 2)
         )
 
         self.best_auc = 0
