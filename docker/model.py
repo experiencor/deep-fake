@@ -7,7 +7,7 @@ import albumentations as A
 from utils import calc_prob
 from pytorch_lightning.core.lightning import LightningModule
 import wandb
-from timesformer.models.vit import TimeSformer
+from mmaction.models import TimeSformer
 
 
 train_auc   = torchmetrics.AUROC(pos_label=1)
