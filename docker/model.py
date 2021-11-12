@@ -118,7 +118,7 @@ class Model(LightningModule):
         return self.forward(batch)
         
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(
+        optimizer = torch.optim.SGD(
             self.parameters(), 
             lr=self.lr
         )
