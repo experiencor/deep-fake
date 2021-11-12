@@ -42,9 +42,10 @@ class Model(LightningModule):
 
     def forward(self, batch):
         audio_video = self.model(batch["video"])
+        latency = self.latency_network(batch["latency"])
         concat_input = torch.cat([
             audio_video,
-            self.latency_network(batch["latency"]),
+            latency,
         ], dim=1)
         logits = self.head(concat_input)
         return logits
