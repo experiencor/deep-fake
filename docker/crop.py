@@ -220,7 +220,7 @@ def work(
             queue.task_done()
             return
 
-        if fail_queue.qsize() > 8:
+        if fail_queue.qsize() > 96:
             queue.task_done()
             continue
 
@@ -313,6 +313,7 @@ def work(
             log(e)
             log(f"number of failed videos: {fail_queue.qsize()}")
             traceback.print_exc()
+            time.sleep(3)
         queue.task_done()
         
 
