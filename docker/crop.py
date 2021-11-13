@@ -3,6 +3,7 @@ import os
 import matplotlib.pylab as plt
 from multiprocessing import Process, JoinableQueue
 import traceback
+import gc
 import json
 import warnings
 import time
@@ -244,7 +245,7 @@ def work(
 
             # make and smooth bboxes
             all_boxes, all_probs = crop_faces(file_path, face_detector, frames, skip_num)
-
+            
             all_sizes = [max((box[3]-box[1]), (box[2]-box[0]))/2 for box in all_boxes]
             all_ys = [(box[1]+box[3])/2 for box in all_boxes]
             all_xs = [(box[0]+box[2])/2 for box in all_boxes]
@@ -264,6 +265,9 @@ def work(
                 probs += [prob]
             log(f"video processing time: {time.time() - tik}")
             tik = time.time()
+            del frames
+            del videoclip
+            gc.collect()
 
             # read audio and resample audio
             try:
@@ -309,7 +313,7 @@ def work(
         except Exception as e:
             queue.put(file_path)
             fail_queue.put((file_path))
-            log("=" * 20)
+            log("=" * 20, file_path)
             log(e)
             log(f"number of failed videos: {fail_queue.qsize()}")
             traceback.print_exc()
