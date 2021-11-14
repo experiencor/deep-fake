@@ -39,7 +39,7 @@ class Dataset(torch.utils.data.Dataset):
     def __getitem__(self, video_index):
         data_row = self._data_frame.iloc[video_index]
         filepath = data_row["filepath"]
-        weight = list(data_row["weight"])
+        weight = data_row["weight"]
         filename = data_row["filename"].split(".")[0]
         label = int(data_row["label"])
         
@@ -66,7 +66,7 @@ class Dataset(torch.utils.data.Dataset):
         sample_dict = {
             "video": torch.permute(torch.tensor(frames), (3, 0, 1, 2)).half(),
             "label": label,
-            "weight": torch.tensor(weight),
+            "weight": weight,
             "video_index": video_index,
             "file_path": filename,
             "latency": latency.half(), 
