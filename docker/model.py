@@ -56,7 +56,8 @@ class Model(LightningModule):
         lr = [group['lr'] for group in opt.param_groups][0]
         
         logits = self.forward(batch)
-        loss = F.cross_entropy(logits, batch["label"])
+        loss = F.cross_entropy(logits, batch["label"], reduction="none")
+        loss = (batch["weight"] * loss).sum() / batch["weight"].sum()
 
         mean_loss = torch.mean(self.all_gather(loss))
         train_auc.update(calc_prob(logits), batch["label"])
@@ -82,6 +83,7 @@ class Model(LightningModule):
     def validation_step(self, batch, _):            
         logits = self.forward(batch)
         loss = F.cross_entropy(logits, batch["label"])
+        loss = (batch["weight"] * loss).sum() / batch["weight"].sum()
 
         mean_loss = torch.mean(self.all_gather(loss))
         val_auc.update(calc_prob(logits), batch["label"])
