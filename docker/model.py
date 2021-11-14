@@ -57,6 +57,8 @@ class Model(LightningModule):
         
         logits = self.forward(batch)
         loss = F.cross_entropy(logits, batch["label"], reduction="none")
+        print(loss)
+        print(batch["weight"])
         loss = (batch["weight"] * loss).sum() / batch["weight"].sum()
 
         mean_loss = torch.mean(self.all_gather(loss))
