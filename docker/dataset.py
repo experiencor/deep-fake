@@ -64,7 +64,7 @@ class Dataset(torch.utils.data.Dataset):
             traceback.print_exc()
         
         sample_dict = {
-            "video": torch.permute(torch.tensor(frames), (3, 0, 1, 2)).half(),
+            "video": torch.tensor(frames).permute(3, 0, 1, 2).half(),
             "label": label,
             "weight": weight,
             "video_index": video_index,
