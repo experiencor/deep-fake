@@ -10,6 +10,6 @@
     "device": "cuda",
     "train_batch_size": 4,
     "submit_batch_size": 1,
-    "root_path": "/data/projects/deepfake",
+    "root_path": "data/projects/deepfake",
     "epoch": 8
 }
