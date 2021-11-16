@@ -8,7 +8,7 @@
     "lr": 5e-3,
     "seed": 100,
     "device": "cuda",
-    "train_batch_size": 4,
+    "train_batch_size": 2,
     "submit_batch_size": 1,
     "root_path": "/home/van.tuan@ljnad.lajavaness.com/deep-fake/data/projects/deepfake",
     "epoch": 8
