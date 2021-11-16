@@ -283,8 +283,10 @@ def work(
                     resample_rate
                 )).float()
                 if frame_size != 224:
-                    faces = [cv2.resize(face, (224, 224)) for face in faces]
-                mdist, offset, conf = compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
+                    lips = [cv2.resize(face, (224, 224)) for face in faces]
+                else:
+                    lips = faces
+                mdist, offset, conf = compute_latency(__S__, lips, audio, resample_rate, batch_size=8, vshift=15)
             except Exception as e:
                 log("No audio found!", e)
                 traceback.print_exc()
