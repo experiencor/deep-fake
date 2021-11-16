@@ -17,6 +17,7 @@ from utils import log, create_folder, calc_pdist
 from scipy.ndimage.filters import uniform_filter1d
 import time
 import librosa
+import traceback
 import torch
 from moviepy.editor import AudioFileClip, VideoFileClip, CompositeAudioClip
 from moviepy.video.io import ImageSequenceClip
@@ -281,9 +282,12 @@ def work(
                     audio_rate,
                     resample_rate
                 )).float()
+                if frame_size != 224:
+                    faces = [cv2.resize(face, (224, 224)) for face in faces]
                 mdist, offset, conf = compute_latency(__S__, faces, audio, resample_rate, batch_size=8, vshift=15)
             except Exception as e:
                 log("No audio found!", e)
+                traceback.print_exc()
                 mdist, offset, conf = [], [], []
 
             # save the avi and compute the latency

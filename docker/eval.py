@@ -23,6 +23,7 @@ def main(input_dir, output_file):
     test_videos = [video for video in sorted(os.listdir(input_dir)) if ".mp4" in video]
     test_data = pd.DataFrame({
         "filename": test_videos,
+        "weight": [1] * len(test_videos),
         "filepath": ["metadata"] * len(test_videos),
         "label": [1] * len(test_videos)
     })
