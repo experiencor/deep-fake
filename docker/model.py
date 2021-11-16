@@ -41,7 +41,6 @@ class Model(LightningModule):
         wandb.log(metrics, step=self.global_step)
 
     def forward(self, batch):
-        print(batch["video"].shape)
         audio_video = self.model(batch["video"])
         latency = self.latency_network(batch["latency"])
         concat_input = torch.cat([
