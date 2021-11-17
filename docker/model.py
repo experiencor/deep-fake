@@ -19,7 +19,7 @@ class Model(LightningModule):
     def __init__(self, total_steps, lr):
         super().__init__()
         self.model = TimeSformer(
-            32, 224, 16, embed_dims=768, attention_type='divided_space_time'
+            64, 224, 16, embed_dims=768, attention_type='divided_space_time'
         )
 
         self.latency_network = nn.Sequential(
