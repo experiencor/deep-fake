@@ -1,7 +1,7 @@
 {
-    "max_clip_len": 32,
+    "max_clip_len": 16,
     "face_detection_step": 64,
-    "frame_num": 32,
+    "frame_num": 16,
     "frame_size": 224,
     "freq_num": 128,
     "resample_rate": 16000,
