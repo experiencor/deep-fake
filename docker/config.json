@@ -1,5 +1,5 @@
 {
-    "max_clip_len": 16,
+    "max_clip_len": 32,
     "face_detection_step": 64,
     "frame_num": 32,
     "frame_size": 224,
